@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>反射神経テスト</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    transition: background 0.1s;
+    background: #1a1a2e;
+    color: #fff;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  #message { font-size: 2rem; font-weight: 700; text-align: center; line-height: 1.4; }
+  #sub     { font-size: 1rem; opacity: 0.6; margin-top: 12px; text-align: center; }
+  #time    { font-size: 4rem; font-weight: 900; margin-top: 8px; }
+  .history { margin-top: 24px; font-size: 0.85rem; opacity: 0.5; text-align: center; }
+  .ad      { position: fixed; bottom: 0; width: 100%; max-width: 320px; min-height: 50px; }
+</style>
+</head>
+<body>
+
+<div id="message">画面をタップして開始</div>
+<div id="sub"></div>
+<div id="time"></div>
+<div class="history" id="history"></div>
+<div class="ad"><!-- AdSense --></div>
+
+<script>
+const STATES = { IDLE: 0, WAITING: 1, GO: 2, RESULT: 3, EARLY: 4 };
+let state = STATES.IDLE;
+let startTime, waitTimer;
+let records = JSON.parse(localStorage.getItem('reaction-records') || '[]');
+
+const body = document.body;
+const msg  = document.getElementById('message');
+const sub  = document.getElementById('sub');
+const timeEl = document.getElementById('time');
+const histEl = document.getElementById('history');
+
+function renderHistory() {
+  if (!records.length) { histEl.textContent = ''; return; }
+  const avg = Math.round(records.reduce((a,b) => a+b, 0) / records.length);
+  const best = Math.min(...records);
+  histEl.textContent = `直近${records.length}回 平均 ${avg}ms / ベスト ${best}ms`;
+}
+
+function rank(ms) {
+  if (ms < 150) return '⚡ 神速';
+  if (ms < 200) return '🔥 超速';
+  if (ms < 250) return '😎 速い';
+  if (ms < 350) return '👍 普通';
+  if (ms < 500) return '🐢 遅め';
+  return '💤 寝てた？';
+}
+
+function toIdle() {
+  state = STATES.IDLE;
+  body.style.background = '#1a1a2e';
+  msg.textContent = '画面をタップして開始';
+  sub.textContent = '';
+  timeEl.textContent = '';
+  renderHistory();
+}
+
+function startWaiting() {
+  state = STATES.WAITING;
+  body.style.background = '#1a1a2e';
+  msg.textContent = '待て...';
+  sub.textContent = '緑になったらタップ！';
+  timeEl.textContent = '';
+
+  const delay = 1500 + Math.random() * 3500;
+  waitTimer = setTimeout(() => {
+    if (state !== STATES.WAITING) return;
+    state = STATES.GO;
+    body.style.background = '#00c851';
+    msg.textContent = '今だ！';
+    sub.textContent = '';
+    startTime = performance.now();
+  }, delay);
+}
+
+body.addEventListener('click', () => {
+  if (state === STATES.IDLE)   { startWaiting(); return; }
+  if (state === STATES.WAITING) {
+    clearTimeout(waitTimer);
+    state = STATES.EARLY;
+    body.style.background = '#cc0000';
+    msg.textContent = '早すぎ！';
+    sub.textContent = 'もう一度タップでリトライ';
+    timeEl.textContent = '';
+    return;
+  }
+  if (state === STATES.GO) {
+    const ms = Math.round(performance.now() - startTime);
+    state = STATES.RESULT;
+    body.style.background = '#16213e';
+    msg.textContent = rank(ms);
+    timeEl.textContent = ms + 'ms';
+    sub.textContent = 'タップでもう一度';
+    records.unshift(ms);
+    if (records.length > 10) records = records.slice(0, 10);
+    localStorage.setItem('reaction-records', JSON.stringify(records));
+    renderHistory();
+    return;
+  }
+  if (state === STATES.RESULT || state === STATES.EARLY) { startWaiting(); }
+});
+
+renderHistory();
+</script>
+</body>
+</html>

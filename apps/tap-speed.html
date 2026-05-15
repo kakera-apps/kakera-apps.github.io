@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>連打測定</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #111;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #state-idle, #state-playing, #state-result { display: none; flex-direction: column; align-items: center; }
+  #state-idle { display: flex; }
+
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+  .sub { font-size: 0.9rem; opacity: 0.5; margin-bottom: 40px; }
+
+  #tap-zone {
+    width: 72vw; max-width: 320px;
+    height: 72vw; max-height: 320px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff4d4d, #ff8c00);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 60px rgba(255, 100, 0, 0.4);
+    transition: transform 0.05s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #tap-zone:active { transform: scale(0.95); }
+  #tap-count { font-size: 4rem; font-weight: 900; }
+  #tap-timer { font-size: 1.2rem; opacity: 0.8; }
+
+  .best { font-size: 0.85rem; opacity: 0.4; margin-top: 16px; }
+
+  #result-count { font-size: 6rem; font-weight: 900; line-height: 1; }
+  #result-label { font-size: 1rem; opacity: 0.5; margin-bottom: 8px; }
+  #result-rank  { font-size: 1.8rem; margin: 16px 0; }
+  #result-best  { font-size: 0.85rem; opacity: 0.4; margin-bottom: 32px; }
+
+  .btn-retry {
+    background: #fff; color: #000;
+    border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-retry:active { transform: scale(0.96); }
+  .ad { margin-top: 40px; min-height: 50px; width: 320px; }
+</style>
+</head>
+<body>
+
+<div id="state-idle">
+  <h1>10秒連打</h1>
+  <p class="sub">タップして開始</p>
+  <div id="tap-zone" onclick="startGame()">
+    <div id="tap-count">TAP!</div>
+  </div>
+  <p class="best" id="idle-best"></p>
+</div>
+
+<div id="state-playing">
+  <div id="tap-zone-play" style="
+    width:72vw;max-width:320px;height:72vw;max-height:320px;
+    border-radius:50%;background:linear-gradient(135deg,#4dffb0,#00c8ff);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    cursor:pointer;box-shadow:0 0 60px rgba(0,200,255,0.4);
+    -webkit-tap-highlight-color:transparent;">
+    <div id="play-count" style="font-size:4rem;font-weight:900;">0</div>
+    <div id="play-timer" style="font-size:1.2rem;opacity:0.8;">10.0</div>
+  </div>
+</div>
+
+<div id="state-result">
+  <div id="result-label">10秒で</div>
+  <div id="result-count">0</div>
+  <div style="font-size:1rem;opacity:0.5;">回</div>
+  <div id="result-rank"></div>
+  <div id="result-best"></div>
+  <button class="btn-retry" onclick="showIdle()">もう一度</button>
+  <div class="ad">
+    <!-- AdSense -->
+  </div>
+</div>
+
+<script>
+const RANKS = [
+  [200,'👑 神の指'],
+  [150,'🔥 プロ級'],
+  [100,'⚡ 上級者'],
+  [70, '😎 中級者'],
+  [40, '👍 普通'],
+  [0,  '🐢 まだまだ'],
+];
+function rank(n) { return RANKS.find(([t]) => n >= t)[1]; }
+
+let best = parseInt(localStorage.getItem('tap-best') || '0');
+let taps = 0, timer = null, remaining = 10.0;
+
+function showIdle() {
+  document.getElementById('state-idle').style.display = 'flex';
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'none';
+  best = parseInt(localStorage.getItem('tap-best') || '0');
+  document.getElementById('idle-best').textContent = best ? `自己ベスト: ${best}回` : '';
+}
+
+function startGame() {
+  taps = 0; remaining = 10.0;
+  document.getElementById('state-idle').style.display = 'none';
+  document.getElementById('state-playing').style.display = 'flex';
+  document.getElementById('state-result').style.display = 'none';
+
+  const zone = document.getElementById('tap-zone-play');
+  zone.addEventListener('click', onTap);
+  zone.addEventListener('touchstart', onTap, {passive: true});
+
+  const interval = setInterval(() => {
+    remaining = Math.max(0, remaining - 0.1);
+    document.getElementById('play-timer').textContent = remaining.toFixed(1);
+    if (remaining <= 0) {
+      clearInterval(interval);
+      zone.removeEventListener('click', onTap);
+      zone.removeEventListener('touchstart', onTap);
+      showResult();
+    }
+  }, 100);
+}
+
+function onTap(e) {
+  if (e.type === 'touchstart') e.preventDefault();
+  taps++;
+  document.getElementById('play-count').textContent = taps;
+}
+
+function showResult() {
+  if (taps > best) { best = taps; localStorage.setItem('tap-best', best); }
+  document.getElementById('result-count').textContent = taps;
+  document.getElementById('result-rank').textContent = rank(taps);
+  document.getElementById('result-best').textContent = `自己ベスト: ${best}回`;
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'flex';
+}
+</script>
+</body>
+</html>

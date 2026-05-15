@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ミニゲーム集</title>
+<meta name="description" content="暇つぶしに使えるシンプルなミニゲーム集。カウンター・反射神経テスト・連打測定。">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    font-size: 0.9rem;
+    opacity: 0.4;
+    margin-top: 8px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  a.card {
+    display: block;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  a.card:hover { transform: translateY(-2px); border-color: #444; }
+  a.card:active { transform: scale(0.98); }
+  .card-icon { font-size: 2.4rem; margin-bottom: 16px; }
+  .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+  .card-desc { font-size: 0.85rem; opacity: 0.5; line-height: 1.6; }
+  footer {
+    text-align: center;
+    margin-top: 64px;
+    font-size: 0.75rem;
+    opacity: 0.25;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ミニゲーム集</h1>
+  <p>シンプルな暇つぶしゲーム</p>
+</header>
+
+<div class="grid">
+  <a class="card" href="apps/counter.html">
+    <div class="card-icon">🔢</div>
+    <div class="card-title">ただ数える</div>
+    <div class="card-desc">タップするだけのカウンター。数を数えるだけ。</div>
+  </a>
+  <a class="card" href="apps/reaction.html">
+    <div class="card-icon">⚡</div>
+    <div class="card-title">反射神経テスト</div>
+    <div class="card-desc">画面が緑になった瞬間をタップ。あなたの反射神経は？</div>
+  </a>
+  <a class="card" href="apps/tap-speed.html">
+    <div class="card-icon">🔥</div>
+    <div class="card-title">10秒連打</div>
+    <div class="card-desc">10秒間に何回タップできる？限界に挑戦。</div>
+  </a>
+</div>
+
+<footer>
+  <p>© 2026 ミニゲーム集 ･ <a href="privacy.html" style="color:inherit;">プライバシーポリシー</a></p>
+</footer>
+
+</body>
+</html>
