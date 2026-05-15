@@ -198,7 +198,7 @@ function nextQuestion() {
   targetAngle = 5 + Math.floor(Math.random() * 171);
   document.getElementById('target-angle-value').textContent = targetAngle + '°';
   currentAngle = 0; // start at 0° (pointing right)
-  document.getElementById('current-angle-label').textContent = 'ドラッグして角度を調整';
+  document.getElementById('current-angle-label').textContent = '';
   updateLine();
 }
 
@@ -248,7 +248,7 @@ function updateLine() {
   } else {
     document.getElementById('angle-arc').setAttribute('d', '');
   }
-  document.getElementById('current-angle-label').textContent = `現在: ${currentAngle}°`;
+  // angle intentionally not shown to player
 }
 
 const svg = document.getElementById('svg-area');

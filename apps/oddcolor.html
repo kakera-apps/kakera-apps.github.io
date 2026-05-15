@@ -133,7 +133,7 @@
     <span>レベル <span id="hud-level">1</span></span>
     <span class="lives" id="hud-lives">❤️❤️❤️</span>
   </div>
-  <div id="level-label">Hue差: <span id="hud-diff">20</span>°</div>
+  <div id="level-label"><span id="hud-diff">Hue差: 20°</span></div>
   <div id="grid"></div>
   <div id="diff-label">微妙に違うマスを探せ！</div>
 </div>
@@ -149,10 +149,13 @@
 
 <script>
 const GRID_SIZE = 16;
-const CORRECT_IDX_KEY = 'odd-idx';
 const HUE_START = 20;
 const HUE_MIN = 3;
 const HUE_DEC = 1.5;
+// Level at which hue bottoms out: ceil((HUE_START - HUE_MIN) / HUE_DEC) + 1 = 12
+const HUE_FLOOR_LV = Math.ceil((HUE_START - HUE_MIN) / HUE_DEC) + 1;
+const L_DEC = 0.4; // lightness diff decrease per level beyond hue floor
+const L_MIN = 0.5;
 
 let level = 1;
 let lives = 3;
@@ -161,6 +164,12 @@ let canTap = true;
 
 function hueDiff(lv) {
   return Math.max(HUE_MIN, HUE_START - (lv - 1) * HUE_DEC);
+}
+
+function lightDiff(lv) {
+  if (lv <= HUE_FLOOR_LV) return 0;
+  const extra = lv - HUE_FLOOR_LV;
+  return Math.max(L_MIN, 8 - (extra - 1) * L_DEC);
 }
 
 function hslStr(h, s, l) {
@@ -187,7 +196,11 @@ function renderGrid() {
   canTap = true;
   document.getElementById('hud-level').textContent = level;
   const diff = hueDiff(level);
-  document.getElementById('hud-diff').textContent = Math.round(diff);
+  const ldiff = lightDiff(level);
+  const diffLabel = ldiff > 0
+    ? `Hue差: ${Math.round(diff)}° / 明度差: ${ldiff.toFixed(1)}`
+    : `Hue差: ${Math.round(diff)}°`;
+  document.getElementById('hud-diff').textContent = diffLabel;
   document.getElementById('hud-lives').textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
 
   const baseH = Math.floor(Math.random() * 360);
@@ -195,8 +208,8 @@ function renderGrid() {
   const baseL = 40 + Math.floor(Math.random() * 20);
 
   correctIdx = Math.floor(Math.random() * GRID_SIZE);
-  // odd color: shift hue
   const oddH = (baseH + diff) % 360;
+  const oddL = baseL + ldiff;
 
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -204,7 +217,7 @@ function renderGrid() {
     const cell = document.createElement('div');
     cell.className = 'cell';
     const isOdd = (i === correctIdx);
-    cell.style.background = isOdd ? hslStr(oddH, baseS, baseL) : hslStr(baseH, baseS, baseL);
+    cell.style.background = isOdd ? hslStr(oddH, baseS, oddL) : hslStr(baseH, baseS, baseL);
     cell.dataset.idx = i;
     cell.addEventListener('click', () => onCellTap(i, cell));
     cell.addEventListener('touchstart', (e) => { e.preventDefault(); onCellTap(i, cell); }, { passive: false });

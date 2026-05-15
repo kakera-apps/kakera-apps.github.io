@@ -209,7 +209,10 @@ function showNumber() {
   document.getElementById('state-input').style.display = 'none';
   document.getElementById('state-result').style.display = 'none';
 
-  document.getElementById('number-display').textContent = targetNumber;
+  const numEl = document.getElementById('number-display');
+  const d = currentDigits;
+  numEl.style.fontSize = d <= 6 ? '5rem' : d <= 9 ? '3.8rem' : d <= 12 ? '2.8rem' : d <= 16 ? '2rem' : '1.4rem';
+  numEl.textContent = targetNumber;
   document.getElementById('digits-label').textContent = `${currentDigits}桁の数字を覚えて！`;
 
   // Reset and animate bar

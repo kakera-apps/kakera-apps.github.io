@@ -133,11 +133,47 @@
     50%      { box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 12px #ff4d4d66, 0 0 80px rgba(255,100,0,0.6); }
   }
   #hold-btn.pressing { animation: pulse 1.5s ease-in-out infinite; }
+
+  /* tier glow overlays applied to body during hold */
+  body.tier-god     { background: #0f0f1a; }
+  body.tier-legend  { background: #10080f; }
+  body.tier-myth    { background: #100808; }
+
+  @keyframes auraGold {
+    0%,100% { box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 12px #ffd70066, 0 0 80px rgba(255,215,0,0.5); }
+    50%      { box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 16px #ffd700aa, 0 0 160px rgba(255,215,0,0.9); }
+  }
+  @keyframes auraRainbow {
+    0%   { box-shadow: 0 0 0 8px #1a1a2e, 0 0 120px rgba(255,0,128,0.8); }
+    33%  { box-shadow: 0 0 0 8px #1a1a2e, 0 0 120px rgba(0,200,255,0.8); }
+    66%  { box-shadow: 0 0 0 8px #1a1a2e, 0 0 120px rgba(100,255,0,0.8); }
+    100% { box-shadow: 0 0 0 8px #1a1a2e, 0 0 120px rgba(255,0,128,0.8); }
+  }
+  @keyframes auraCosmic {
+    0%   { box-shadow: 0 0 0 8px #1a1a2e, 0 0 200px rgba(160,0,255,0.9), 0 0 60px rgba(255,255,255,0.3); }
+    50%  { box-shadow: 0 0 0 8px #1a1a2e, 0 0 200px rgba(255,100,0,0.9), 0 0 80px rgba(255,255,255,0.5); }
+    100% { box-shadow: 0 0 0 8px #1a1a2e, 0 0 200px rgba(160,0,255,0.9), 0 0 60px rgba(255,255,255,0.3); }
+  }
+
+  #hold-btn.tier-5min    { animation: auraGold    2s ease-in-out infinite; background: radial-gradient(circle at 40% 35%, #ffd700, #b8860b); }
+  #hold-btn.tier-30min   { animation: auraGold    1.2s ease-in-out infinite; background: radial-gradient(circle at 40% 35%, #ffe566, #ff8c00); }
+  #hold-btn.tier-1h      { animation: auraRainbow 2s linear infinite; background: radial-gradient(circle at 40% 35%, #ff66ff, #6600cc); }
+  #hold-btn.tier-3h      { animation: auraRainbow 1s linear infinite; background: radial-gradient(circle at 40% 35%, #00ffcc, #003366); }
+  #hold-btn.tier-12h     { animation: auraCosmic  1.5s ease-in-out infinite; background: radial-gradient(circle at 40% 35%, #ffffff, #8800ff); }
+  #hold-btn.tier-24h     { animation: auraCosmic  0.6s ease-in-out infinite; background: radial-gradient(circle at 40% 35%, #fff, #ff0000); }
+
+  #tier-badge {
+    position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+    font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 99px;
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(6px);
+    display: none; white-space: nowrap; z-index: 10;
+  }
 </style>
 </head>
 <body>
 
 <a href="../index.html" id="back-btn">← 戻る</a>
+<div id="tier-badge"></div>
 
 <div id="state-idle">
   <h1>👆 長押し耐久</h1>
@@ -186,7 +222,8 @@ function showIdle() {
   document.getElementById('state-idle').style.display = 'flex';
   document.getElementById('state-result').style.display = 'none';
   isHolding = false;
-  holdBtn.classList.remove('pressing');
+  holdBtn.classList.remove('pressing', ...TIERS.map(t => t.cls));
+  document.getElementById('tier-badge').style.display = 'none';
   btnTimer.style.display = 'none';
   btnIcon.style.display = '';
   btnLabel.style.display = '';
@@ -197,12 +234,25 @@ function showIdle() {
   document.getElementById('idle-best').textContent = best ? `自己ベスト: ${best.toFixed(1)}秒` : '';
 }
 
+function formatTime(s) {
+  if (s < 60) return s.toFixed(1) + 's';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  if (s < 3600) return `${m}:${String(sec).padStart(2,'0')}`;
+  const h = Math.floor(s / 3600);
+  const min = Math.floor((s % 3600) / 60);
+  return `${h}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
 function startHold() {
   if (isHolding) return;
   isHolding = true;
   pressStart = performance.now();
   elapsed = 0;
   holdBtn.classList.add('pressing');
+  // clear any tier classes
+  holdBtn.classList.remove(...TIERS.map(t => t.cls));
+  document.getElementById('tier-badge').style.display = 'none';
   btnIcon.style.display = 'none';
   btnLabel.style.display = 'none';
   btnTimer.style.display = '';
@@ -211,10 +261,12 @@ function startHold() {
 
   timerInterval = setInterval(() => {
     elapsed = (performance.now() - pressStart) / 1000;
-    btnTimer.textContent = elapsed.toFixed(1);
-    // ring: complete circle at 60s
-    const dashLen = Math.min(CIRCUMFERENCE, (elapsed / 60) * CIRCUMFERENCE);
+    btnTimer.textContent = formatTime(elapsed);
+    // ring: one full loop per minute (wraps for higher tiers)
+    const cycleLen = elapsed >= 300 ? 300 : 60;
+    const dashLen = ((elapsed % cycleLen) / cycleLen) * CIRCUMFERENCE;
     ringProgress.style.strokeDasharray = `${dashLen} ${CIRCUMFERENCE}`;
+    applyTierFx(elapsed);
   }, 100);
 }
 
@@ -226,7 +278,8 @@ function endHold() {
 
   if (elapsed < MIN_HOLD) {
     // too short, reset
-    holdBtn.classList.remove('pressing');
+    holdBtn.classList.remove('pressing', ...TIERS.map(t => t.cls));
+    document.getElementById('tier-badge').style.display = 'none';
     btnTimer.style.display = 'none';
     btnIcon.style.display = '';
     btnLabel.style.display = '';
@@ -250,7 +303,23 @@ document.addEventListener('mouseup',  e => { endHold(); });
 // Prevent context menu on long press
 holdBtn.addEventListener('contextmenu', e => e.preventDefault());
 
+const TIERS = [
+  { s: 86400, cls: 'tier-24h', badge: '🏆 化け物',      rank: '🏆 化け物 (24時間超)' },
+  { s: 43200, cls: 'tier-12h', badge: '👁️ 神',          rank: '👁️ 神 (12時間超)' },
+  { s: 10800, cls: 'tier-3h',  badge: '🔮 伝説',        rank: '🔮 伝説 (3時間超)' },
+  { s:  3600, cls: 'tier-1h',  badge: '💀 人外',        rank: '💀 人外 (1時間超)' },
+  { s:  1800, cls: 'tier-30min', badge: '⚡ 廃人',      rank: '⚡ 廃人 (30分超)' },
+  { s:   300, cls: 'tier-5min', badge: '🌟 変態',       rank: '🌟 変態 (5分超)' },
+];
+
+function getTier(s) {
+  for (const t of TIERS) { if (s >= t.s) return t; }
+  return null;
+}
+
 function rank(s) {
+  const t = getTier(s);
+  if (t) return t.rank;
   if (s >= 60) return '👑 鉄人';
   if (s >= 30) return '🔥 すごい';
   if (s >= 10) return '👍 普通';
@@ -258,15 +327,31 @@ function rank(s) {
   return '💀 即死';
 }
 
+function applyTierFx(s) {
+  // Remove all tier classes
+  const allCls = TIERS.map(t => t.cls);
+  holdBtn.classList.remove(...allCls);
+  const tierBadge = document.getElementById('tier-badge');
+  const t = getTier(s);
+  if (t) {
+    holdBtn.classList.add(t.cls);
+    tierBadge.textContent = t.badge;
+    tierBadge.style.display = 'block';
+  } else {
+    tierBadge.style.display = 'none';
+  }
+}
+
 function showResult(sec) {
   document.getElementById('state-idle').style.display = 'none';
   document.getElementById('state-result').style.display = 'flex';
 
-  const timeStr = sec.toFixed(1);
+  const timeStr = sec >= 60 ? formatTime(sec) : sec.toFixed(1);
   const r = rank(sec);
 
   const timeEl = document.getElementById('result-time');
   timeEl.textContent = timeStr;
+  document.getElementById('result-unit').textContent = sec >= 60 ? '' : '秒';
   document.getElementById('result-rank').textContent = r;
 
   const best = parseFloat(localStorage.getItem('hold-best') || '0');
@@ -297,7 +382,8 @@ function showToast(m) {
 function doShare() {
   const time = document.getElementById('result-time').textContent;
   const r    = document.getElementById('result-rank').textContent;
-  const text = `長押し耐久 ${time}秒 ${r}\nあなたは？ → kakera-apps.github.io/apps/hold.html\n#長押し耐久 #kakera_app #暇つぶし`;
+  const suffix = time.includes(':') ? '' : '秒';
+  const text = `長押し耐久 ${time}${suffix} ${r}\nあなたは？ → kakera-apps.github.io/apps/hold.html\n#長押し耐久 #kakera_app #暇つぶし`;
   if (navigator.share) { navigator.share({ text }); }
   else { navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')); }
 }
