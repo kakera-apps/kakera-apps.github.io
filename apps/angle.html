@@ -49,12 +49,8 @@
   /* PLAYING */
   #state-playing { display: none; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
   #q-info { font-size: 0.9rem; opacity: 0.5; }
-  #target-angle-label {
-    font-size: 1.1rem; opacity: 0.7;
-  }
-  #target-angle-value {
-    font-size: 3.5rem; font-weight: 900; line-height: 1; color: #ffd700;
-  }
+  #target-angle-label { font-size: 1.1rem; opacity: 0.7; }
+  #target-angle-value { font-size: 3.5rem; font-weight: 900; line-height: 1; color: #ffd700; }
 
   #svg-area {
     touch-action: none;
@@ -62,7 +58,7 @@
     display: block;
   }
 
-  #current-angle-label { font-size: 1rem; opacity: 0.5; min-height: 1.4em; }
+  #fail-hint { font-size: 0.8rem; opacity: 0.3; }
 
   .decide-btn {
     background: #fff; color: #000; border: none; border-radius: 99px;
@@ -86,8 +82,8 @@
 
   /* RESULT */
   #state-result { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-  #result-avg { font-size: clamp(4rem, 20vw, 7rem); font-weight: 900; line-height: 1; color: #ffd700; }
-  #result-list { font-size: 0.85rem; opacity: 0.4; line-height: 1.9; }
+  #result-count { font-size: clamp(4rem, 20vw, 7rem); font-weight: 900; line-height: 1; color: #ffd700; }
+  #result-rank { font-size: 2rem; margin-top: 4px; }
   #result-best { font-size: 0.8rem; opacity: 0.35; }
 
   .share-btn {
@@ -117,20 +113,19 @@
 
 <div id="state-idle">
   <h1>📐 角度当て</h1>
-  <p>目標角度が表示されます。<br>ドラッグして線を目標角度に合わせ、「決定」を押してください。<br>5問の平均誤差を競います。</p>
+  <p>目標角度が表示されます。<br>ドラッグして線を合わせ「決定」を押してください。<br>誤差20°以内でクリア。何問連続正解できる？（0〜359°対応）</p>
   <p class="best-label" id="idle-best"></p>
   <button class="start-btn" onclick="startGame()">スタート</button>
 </div>
 
 <div id="state-playing">
-  <div id="q-info">問題 1 / 5</div>
+  <div id="q-info">問題 1</div>
   <div id="target-angle-label">目標角度</div>
   <div id="target-angle-value">—°</div>
 
   <svg id="svg-area" width="300" height="300" viewBox="0 0 300 300">
-    <!-- base horizontal reference line -->
+    <!-- base horizontal reference line (0°) -->
     <line x1="30" y1="150" x2="270" y2="150" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
-    <!-- 0° label -->
     <text x="278" y="154" fill="#555" font-size="11" font-family="sans-serif">0°</text>
     <!-- user line -->
     <line id="user-line" x1="150" y1="150" x2="270" y2="150"
@@ -141,7 +136,7 @@
     <path id="angle-arc" d="" fill="none" stroke="#ffd70066" stroke-width="2"/>
   </svg>
 
-  <div id="current-angle-label">ドラッグして角度を調整</div>
+  <div id="fail-hint">誤差20°以内でクリア</div>
   <button class="decide-btn" onclick="decide()">決定</button>
 </div>
 
@@ -150,40 +145,39 @@
   <div id="feedback-rank-icon"></div>
   <div id="feedback-err"></div>
   <div id="feedback-sub"></div>
-  <button id="feedback-next" onclick="nextQuestion()">次へ →</button>
+  <button id="feedback-next">次へ →</button>
 </div>
 
 <div id="state-result">
-  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">5問の平均誤差</div>
-  <div id="result-avg">0</div>
-  <div style="font-size:1rem;opacity:0.5;">度</div>
-  <div id="result-rank" style="font-size:2rem;margin-top:4px;"></div>
-  <div id="result-list"></div>
+  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">何問連続正解？</div>
+  <div id="result-count">0</div>
+  <div style="font-size:1rem;opacity:0.5;">問</div>
+  <div id="result-rank"></div>
   <div id="result-best"></div>
   <button class="share-btn" onclick="doShare()">シェアする 🔗</button>
   <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
 </div>
 
 <script>
-const TOTAL_Q = 5;
+const FAIL_DEG = 20;
 const CX = 150, CY = 150, R = 110;
 
 let questionNum = 0;
-let targetAngle = 90;
-let currentAngle = 0; // degrees from 0° (rightward), measured counter-clockwise (SVG-flipped)
-let errors = [];
+let survived = 0;
+let targetAngle = 0;
+let currentAngle = 0;
 
 function showIdle() {
   document.getElementById('state-idle').style.display = 'flex';
   document.getElementById('state-playing').style.display = 'none';
   document.getElementById('state-result').style.display = 'none';
   document.getElementById('feedback-overlay').style.display = 'none';
-  const best = parseFloat(localStorage.getItem('angle-best') || '999');
-  document.getElementById('idle-best').textContent = best < 999 ? `自己ベスト: 平均誤差 ${best}°` : '';
+  const best = parseInt(localStorage.getItem('angle-best-count') || '0');
+  document.getElementById('idle-best').textContent = best ? `自己ベスト: ${best}問連続正解` : '';
 }
 
 function startGame() {
-  questionNum = 0; errors = [];
+  questionNum = 0; survived = 0;
   document.getElementById('state-idle').style.display = 'none';
   document.getElementById('state-playing').style.display = 'flex';
   document.getElementById('state-result').style.display = 'none';
@@ -193,12 +187,10 @@ function startGame() {
 function nextQuestion() {
   document.getElementById('feedback-overlay').style.display = 'none';
   questionNum++;
-  document.getElementById('q-info').textContent = `問題 ${questionNum} / ${TOTAL_Q}`;
-  // random target 5–175°
-  targetAngle = 5 + Math.floor(Math.random() * 171);
+  document.getElementById('q-info').textContent = `問題 ${questionNum}`;
+  targetAngle = Math.floor(Math.random() * 360);
   document.getElementById('target-angle-value').textContent = targetAngle + '°';
-  currentAngle = 0; // start at 0° (pointing right)
-  document.getElementById('current-angle-label').textContent = '';
+  currentAngle = 0;
   updateLine();
 }
 
@@ -219,36 +211,31 @@ function getAngleFromEvent(e) {
     clientY = e.clientY;
   }
   const svgX = (clientX - rect.left) * scaleX;
-  const svgY = (clientY - rect.top)  * scaleY;
+  const svgY = (clientY - rect.top) * scaleY;
   const dx = svgX - CX;
   const dy = svgY - CY;
-  // atan2 gives angle from +x axis, clockwise in SVG coords
-  // We want counter-clockwise from +x (standard math), so negate dy
   let angle = Math.atan2(-dy, dx) * 180 / Math.PI;
   if (angle < 0) angle += 360;
-  if (angle > 180) angle = 360 - angle; // clamp to 0-180
-  return Math.round(angle);
+  return Math.round(angle) % 360;
 }
 
 function updateLine() {
-  // Convert angle (0° = right, 90° = up, 180° = left) to SVG coords
   const rad = currentAngle * Math.PI / 180;
   const ex = CX + R * Math.cos(rad);
-  const ey = CY - R * Math.sin(rad); // SVG y is inverted
+  const ey = CY - R * Math.sin(rad);
   document.getElementById('user-line').setAttribute('x2', ex);
   document.getElementById('user-line').setAttribute('y2', ey);
 
-  // Draw arc from 0° to currentAngle
-  if (currentAngle > 0 && currentAngle < 180) {
+  if (currentAngle > 0 && currentAngle < 360) {
     const arcR = 40;
     const ax = CX + arcR * Math.cos(rad);
     const ay = CY - arcR * Math.sin(rad);
+    const large = currentAngle > 180 ? 1 : 0;
     document.getElementById('angle-arc').setAttribute('d',
-      `M ${CX + arcR} ${CY} A ${arcR} ${arcR} 0 0 0 ${ax} ${ay}`);
+      `M ${CX + arcR} ${CY} A ${arcR} ${arcR} 0 ${large} 0 ${ax} ${ay}`);
   } else {
     document.getElementById('angle-arc').setAttribute('d', '');
   }
-  // angle intentionally not shown to player
 }
 
 const svg = document.getElementById('svg-area');
@@ -256,10 +243,8 @@ let dragging = false;
 
 svg.addEventListener('mousedown', e => { dragging = true; onMove(e); });
 svg.addEventListener('touchstart', e => { e.preventDefault(); dragging = true; onMove(e); }, { passive: false });
-
 document.addEventListener('mousemove', e => { if (dragging) onMove(e); });
 svg.addEventListener('touchmove', e => { e.preventDefault(); if (dragging) onMove(e); }, { passive: false });
-
 document.addEventListener('mouseup', () => { dragging = false; });
 svg.addEventListener('touchend', () => { dragging = false; });
 
@@ -269,31 +254,40 @@ function onMove(e) {
 }
 
 function decide() {
-  const err = Math.abs(currentAngle - targetAngle);
-  errors.push(err);
+  const rawErr = Math.abs(currentAngle - targetAngle);
+  const err = Math.min(rawErr, 360 - rawErr); // shortest angular distance
+  const success = err <= FAIL_DEG;
 
   let icon, msg;
-  if (err <= 1)  { icon = '🎯'; msg = `誤差 ${err}° — 完璧！`; }
-  else if (err <= 3)  { icon = '⭐'; msg = `誤差 ${err}° — すごい！`; }
-  else if (err <= 8)  { icon = '👍'; msg = `誤差 ${err}° — 良い`; }
-  else                { icon = '😅'; msg = `誤差 ${err}° — もっと頑張れ！`; }
+  if (err <= 2)          { icon = '🎯'; msg = `誤差 ${err}° — 完璧！`; }
+  else if (err <= 5)     { icon = '⭐'; msg = `誤差 ${err}° — すごい！`; }
+  else if (err <= FAIL_DEG) { icon = '👍'; msg = `誤差 ${err}° — クリア`; }
+  else                   { icon = '💀'; msg = `誤差 ${err}° — アウト！`; }
 
   document.getElementById('feedback-rank-icon').textContent = icon;
   document.getElementById('feedback-err').textContent = msg;
   document.getElementById('feedback-sub').textContent =
     `目標: ${targetAngle}° / あなた: ${currentAngle}°`;
+
   const nextBtn = document.getElementById('feedback-next');
-  nextBtn.textContent = questionNum < TOTAL_Q ? '次へ →' : '結果を見る';
-  nextBtn.onclick = questionNum < TOTAL_Q ? nextQuestion : showResult;
+  if (success) {
+    survived++;
+    nextBtn.textContent = '次へ →';
+    nextBtn.onclick = nextQuestion;
+  } else {
+    nextBtn.textContent = '結果を見る';
+    nextBtn.onclick = showResult;
+  }
 
   document.getElementById('feedback-overlay').style.display = 'flex';
 }
 
-function rank(avg) {
-  if (avg <= 1)  return '🎯 神の眼';
-  if (avg <= 3)  return '⭐ すごい';
-  if (avg <= 8)  return '👍 良い';
-  return '😅 センスを磨け';
+function rank(count) {
+  if (count >= 20) return '🎯 神の眼';
+  if (count >= 10) return '⭐ すごい';
+  if (count >= 5)  return '👍 良い';
+  if (count >= 1)  return '😅 センスを磨け';
+  return '💀 即アウト';
 }
 
 function showResult() {
@@ -301,27 +295,21 @@ function showResult() {
   document.getElementById('state-playing').style.display = 'none';
   document.getElementById('state-result').style.display = 'flex';
 
-  const avg = Math.round(errors.reduce((a,b)=>a+b,0) / errors.length * 10) / 10;
-  const r = rank(avg);
+  const countEl = document.getElementById('result-count');
+  countEl.textContent = survived;
+  document.getElementById('result-rank').textContent = rank(survived);
 
-  const avgEl = document.getElementById('result-avg');
-  avgEl.textContent = avg;
-  document.getElementById('result-rank').textContent = r;
-
-  const listLines = errors.map((e, i) => `問題${i+1}: 誤差 ${e}°`).join('\n');
-  document.getElementById('result-list').textContent = listLines;
-
-  const best = parseFloat(localStorage.getItem('angle-best') || '999');
-  if (avg < best) {
-    localStorage.setItem('angle-best', avg);
+  const best = parseInt(localStorage.getItem('angle-best-count') || '0');
+  if (survived > best) {
+    localStorage.setItem('angle-best-count', survived);
     document.getElementById('result-best').textContent = '🎉 新記録！';
   } else {
-    document.getElementById('result-best').textContent = `自己ベスト: ${best}°`;
+    document.getElementById('result-best').textContent = best ? `自己ベスト: ${best}問` : '';
   }
 
-  avgEl.classList.remove('pop-in');
-  void avgEl.offsetWidth;
-  avgEl.classList.add('pop-in');
+  countEl.classList.remove('pop-in');
+  void countEl.offsetWidth;
+  countEl.classList.add('pop-in');
 }
 
 function showToast(m) {
@@ -337,9 +325,9 @@ function showToast(m) {
 }
 
 function doShare() {
-  const avgErr = document.getElementById('result-avg').textContent;
+  const count = document.getElementById('result-count').textContent;
   const r = document.getElementById('result-rank').textContent;
-  const text = `角度当て 平均誤差${avgErr}° ${r}\nあなたは？ → kakera-apps.github.io/apps/angle.html\n#角度当て #kakera_app #暇つぶし`;
+  const text = `角度当て ${count}問連続正解 ${r}\nあなたは？ → kakera-apps.github.io/apps/angle.html\n#角度当て #kakera_app #暇つぶし`;
   if (navigator.share) { navigator.share({ text }); }
   else { navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')); }
 }

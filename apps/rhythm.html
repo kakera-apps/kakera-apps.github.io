@@ -60,58 +60,41 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
+    font-size: 2rem;
     opacity: 0.7;
+    cursor: default;
   }
   #metronome-circle.lit {
     background: #ffd700;
     box-shadow: 0 0 60px rgba(255, 215, 0, 0.6);
     transform: scale(1.06);
     opacity: 1;
+    border-color: #ffd700;
   }
-  #metronome-circle.tap-active {
-    background: #4fc3f7;
-    box-shadow: 0 0 60px rgba(79, 195, 247, 0.6);
-    transform: scale(1.06);
+  #metronome-circle.tap-ready {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.7);
     opacity: 1;
+    cursor: pointer;
+    animation: tapPulse 0.5s ease-in-out infinite;
+  }
+  @keyframes tapPulse {
+    0%,100% { box-shadow: 0 0 20px rgba(255,255,255,0.2); transform: scale(1); }
+    50%      { box-shadow: 0 0 60px rgba(255,255,255,0.5); transform: scale(1.06); }
   }
 
   #phase-label {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
     min-height: 1.6em;
     text-align: center;
   }
-  #tap-hint {
-    font-size: 0.9rem;
-    opacity: 0.4;
-    text-align: center;
-  }
-  .tap-btn {
-    width: min(64vw, 240px);
-    height: min(64vw, 240px);
-    border-radius: 50%;
-    background: linear-gradient(135deg, #4fc3f7, #1d9bf0);
-    border: none;
-    cursor: pointer;
-    font-size: 1.4rem;
-    font-weight: 900;
-    color: #fff;
-    box-shadow: 0 0 40px rgba(79,195,247,0.4);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .tap-btn:active { transform: scale(0.95); }
+  #fail-threshold { font-size: 0.8rem; opacity: 0.35; }
 
   /* RESULT */
   #state-result { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-  #result-avg { font-size: clamp(4rem, 20vw, 7rem); font-weight: 900; line-height: 1; color: #ffd700; }
-  #result-unit { font-size: 1rem; opacity: 0.5; }
+  #result-rounds { font-size: clamp(4rem, 20vw, 7rem); font-weight: 900; line-height: 1; color: #ffd700; }
   #result-rank { font-size: 2rem; }
-  #result-list { font-size: 0.85rem; opacity: 0.4; line-height: 1.9; margin-top: 4px; }
   #result-best { font-size: 0.8rem; opacity: 0.35; }
 
   .share-btn {
@@ -141,40 +124,35 @@
 
 <div id="state-idle">
   <h1>🎵 リズム感テスト</h1>
-  <p>円が4回光ります。<br>5回目のタイミングで自分でタップ。<br>5ラウンドの平均ズレを計測します。</p>
+  <p>円が4回光ります。<br>5回目のタイミングで同じ円をタップ。<br>150ms以内でクリア。何ラウンド連続で続けられる？</p>
   <p class="best-label" id="idle-best"></p>
   <button class="start-btn" onclick="startGame()">スタート</button>
 </div>
 
 <div id="state-playing">
-  <div id="round-info">ラウンド 1 / 5</div>
-  <div id="metronome-circle" id="circle">待機中</div>
-  <button class="tap-btn" id="tap-btn" onclick="onTap()">
-    <span style="font-size:2rem">👆</span>
-    <span>タップ！</span>
-  </button>
+  <div id="round-info">ラウンド 1</div>
+  <div id="metronome-circle"></div>
   <div id="phase-label"></div>
-  <div id="tap-hint"></div>
+  <div id="fail-threshold">150ms以内でクリア</div>
 </div>
 
 <div id="state-result">
-  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">5ラウンド平均ズレ</div>
-  <div id="result-avg">0</div>
-  <div id="result-unit">ms</div>
+  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">生存ラウンド数</div>
+  <div id="result-rounds">0</div>
+  <div style="font-size:1rem;opacity:0.5;">ラウンド</div>
   <div id="result-rank"></div>
-  <div id="result-list"></div>
   <div id="result-best"></div>
   <button class="share-btn" onclick="doShare()">シェアする 🔗</button>
   <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
 </div>
 
 <script>
-const TOTAL_ROUNDS = 5;
+const FAIL_MS = 150;
 const FLASH_INTERVAL = 1000;
 const FLASH_DUR = 200;
 
 let round = 0;
-let diffs = [];
+let survived = 0;
 let flashCount = 0;
 let lastFlashTime = 0;
 let idealTapTime = 0;
@@ -183,16 +161,22 @@ let timers = [];
 
 function clearAllTimers() { timers.forEach(clearTimeout); timers = []; }
 
+const circle = document.getElementById('metronome-circle');
+
+circle.addEventListener('click', onCircleTap);
+circle.addEventListener('touchstart', e => { e.preventDefault(); onCircleTap(); }, { passive: false });
+
 function showIdle() {
   document.getElementById('state-idle').style.display = 'flex';
   document.getElementById('state-playing').style.display = 'none';
   document.getElementById('state-result').style.display = 'none';
-  const best = parseInt(localStorage.getItem('rhythm-best') || '9999');
-  document.getElementById('idle-best').textContent = best < 9999 ? `自己ベスト: 平均${best}ms` : '';
+  clearAllTimers();
+  const best = parseInt(localStorage.getItem('rhythm-best') || '0');
+  document.getElementById('idle-best').textContent = best ? `自己ベスト: ${best}ラウンド` : '';
 }
 
 function startGame() {
-  round = 0; diffs = [];
+  round = 0; survived = 0;
   document.getElementById('state-idle').style.display = 'none';
   document.getElementById('state-playing').style.display = 'flex';
   document.getElementById('state-result').style.display = 'none';
@@ -204,114 +188,106 @@ function startRound() {
   flashCount = 0;
   waitingForTap = false;
   round++;
-  document.getElementById('round-info').textContent = `ラウンド ${round} / ${TOTAL_ROUNDS}`;
+  document.getElementById('round-info').textContent = `ラウンド ${round}`;
   document.getElementById('phase-label').textContent = '光るのを見て...';
-  document.getElementById('tap-hint').textContent = '';
 
-  const circle = document.getElementById('metronome-circle');
-  const tapBtn = document.getElementById('tap-btn');
-  circle.style.display = 'flex';
-  tapBtn.style.display = 'none';
+  circle.className = '';
+  circle.textContent = '';
+  circle.style.pointerEvents = 'none';
 
   scheduleFlash();
 }
 
 function scheduleFlash() {
-  const t = setTimeout(() => {
-    doFlash();
-  }, FLASH_INTERVAL);
-  timers.push(t);
+  timers.push(setTimeout(doFlash, FLASH_INTERVAL));
 }
 
 function doFlash() {
   flashCount++;
-  const circle = document.getElementById('metronome-circle');
   circle.classList.add('lit');
   lastFlashTime = performance.now();
 
-  const t1 = setTimeout(() => circle.classList.remove('lit'), FLASH_DUR);
-  timers.push(t1);
+  timers.push(setTimeout(() => circle.classList.remove('lit'), FLASH_DUR));
 
   if (flashCount < 4) {
     scheduleFlash();
   } else {
-    // after 4th flash, next 1000ms = ideal tap time
     idealTapTime = lastFlashTime + FLASH_INTERVAL;
-    const t2 = setTimeout(() => {
+
+    // show tap phase 300ms before ideal time
+    timers.push(setTimeout(() => {
       waitingForTap = true;
-      document.getElementById('phase-label').textContent = '5回目のタイミングで！';
-      document.getElementById('tap-hint').textContent = '↓ 今すぐタップ！';
-      const circle = document.getElementById('metronome-circle');
-      circle.style.display = 'none';
-      const tapBtn = document.getElementById('tap-btn');
-      tapBtn.style.display = 'flex';
-    }, FLASH_INTERVAL - 300);
-    timers.push(t2);
+      document.getElementById('phase-label').textContent = '今！タップ！';
+      circle.classList.add('tap-ready');
+      circle.textContent = '👆';
+      circle.style.pointerEvents = 'auto';
+    }, FLASH_INTERVAL - 300));
+
+    // auto-fail 600ms after ideal time
+    timers.push(setTimeout(() => {
+      if (waitingForTap) { waitingForTap = false; processTap(true); }
+    }, FLASH_INTERVAL + 600));
   }
 }
 
-function onTap() {
+function onCircleTap() {
   if (!waitingForTap) return;
   waitingForTap = false;
   clearAllTimers();
+  processTap(false);
+}
 
-  const now = performance.now();
-  const diff = Math.abs(Math.round(now - idealTapTime));
-  diffs.push(diff);
+function processTap(isAutoFail) {
+  circle.classList.remove('tap-ready');
+  circle.style.pointerEvents = 'none';
 
-  document.getElementById('phase-label').textContent = `ズレ: ${diff}ms`;
-  document.getElementById('tap-hint').textContent = '';
+  const diff = isAutoFail ? 9999 : Math.abs(Math.round(performance.now() - idealTapTime));
+  const success = diff <= FAIL_MS;
 
-  const tapBtn = document.getElementById('tap-btn');
-  tapBtn.style.display = 'none';
-  const circle = document.getElementById('metronome-circle');
-  circle.style.display = 'flex';
-  circle.textContent = `${diff}ms`;
-
-  if (round < TOTAL_ROUNDS) {
-    const t = setTimeout(() => {
-      circle.textContent = '待機中';
+  if (success) {
+    survived++;
+    circle.textContent = `✓`;
+    document.getElementById('phase-label').textContent = `ズレ: ${diff}ms — クリア！`;
+    timers.push(setTimeout(() => {
+      circle.textContent = '';
       startRound();
-    }, 1200);
-    timers.push(t);
+    }, 900));
   } else {
-    const t = setTimeout(showResult, 1200);
-    timers.push(t);
+    circle.textContent = `✗`;
+    document.getElementById('phase-label').textContent = isAutoFail
+      ? 'タイムオーバー！'
+      : `ズレ: ${diff}ms — アウト！`;
+    timers.push(setTimeout(showResult, 1200));
   }
 }
 
-function rank(avg) {
-  if (avg <= 30)  return '🎵 神業';
-  if (avg <= 80)  return '⭐ すごい';
-  if (avg <= 150) return '👍 良い';
-  return '😅 練習して';
+function rank(rounds) {
+  if (rounds >= 20) return '🎵 神業';
+  if (rounds >= 10) return '⭐ すごい';
+  if (rounds >= 5)  return '👍 良い';
+  if (rounds >= 1)  return '😅 練習して';
+  return '💀 即リタイア';
 }
 
 function showResult() {
   document.getElementById('state-playing').style.display = 'none';
   document.getElementById('state-result').style.display = 'flex';
 
-  const avg = Math.round(diffs.reduce((a,b)=>a+b,0) / diffs.length);
-  const r = rank(avg);
+  const roundsEl = document.getElementById('result-rounds');
+  roundsEl.textContent = survived;
+  document.getElementById('result-rank').textContent = rank(survived);
 
-  const avgEl = document.getElementById('result-avg');
-  avgEl.textContent = avg;
-  document.getElementById('result-rank').textContent = r;
-
-  const listLines = diffs.map((d, i) => `ラウンド${i+1}: ${d}ms`).join('\n');
-  document.getElementById('result-list').textContent = listLines;
-
-  const best = parseInt(localStorage.getItem('rhythm-best') || '9999');
-  if (avg < best) {
-    localStorage.setItem('rhythm-best', avg);
+  const best = parseInt(localStorage.getItem('rhythm-best') || '0');
+  if (survived > best) {
+    localStorage.setItem('rhythm-best', survived);
     document.getElementById('result-best').textContent = '🎉 新記録！';
   } else {
-    document.getElementById('result-best').textContent = `自己ベスト: ${best}ms`;
+    document.getElementById('result-best').textContent = best ? `自己ベスト: ${best}ラウンド` : '';
   }
 
-  avgEl.classList.remove('pop-in');
-  void avgEl.offsetWidth;
-  avgEl.classList.add('pop-in');
+  roundsEl.classList.remove('pop-in');
+  void roundsEl.offsetWidth;
+  roundsEl.classList.add('pop-in');
 }
 
 function showToast(m) {
@@ -327,9 +303,9 @@ function showToast(m) {
 }
 
 function doShare() {
-  const avg = document.getElementById('result-avg').textContent;
-  const r   = document.getElementById('result-rank').textContent;
-  const text = `リズム感テスト 平均ズレ${avg}ms ${r}\nあなたは？ → kakera-apps.github.io/apps/rhythm.html\n#リズム感テスト #kakera_app #暇つぶし`;
+  const rounds = document.getElementById('result-rounds').textContent;
+  const r = document.getElementById('result-rank').textContent;
+  const text = `リズム感テスト ${rounds}ラウンド生存 ${r}\nあなたは？ → kakera-apps.github.io/apps/rhythm.html\n#リズム感テスト #kakera_app #暇つぶし`;
   if (navigator.share) { navigator.share({ text }); }
   else { navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')); }
 }
