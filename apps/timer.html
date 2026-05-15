@@ -102,6 +102,8 @@
     margin-top: 24px;
     letter-spacing: 0.05em;
   }
+  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:20px;display:none; }
+  .share-btn:active { opacity:0.8; }
   .ad { margin-top: 48px; min-height: 50px; width: 320px; }
 </style>
 </head>
@@ -120,6 +122,7 @@
 <div class="elapsed" id="elapsed"></div>
 <div class="rank-text" id="rank"></div>
 <div class="diff-text" id="diff"></div>
+<button class="share-btn" id="share-btn" style="display:none">シェアする 🔗</button>
 <div class="history" id="history"></div>
 
 <div class="ad">
@@ -164,6 +167,7 @@
     elapsedEl.textContent = '';
     rankEl.textContent = '';
     diffEl.textContent = '';
+    shareBtn.style.display = 'none';
   }
 
   function toRunning() {
@@ -181,7 +185,7 @@
     const elapsed = (performance.now() - startTime) / 1000;
     state = STATES.DONE;
     circle.className = 'circle done';
-    circleMsg.textContent = 'タップで<br>リトライ';
+    circleMsg.innerHTML = 'タップで<br>リトライ';
     circleSub.textContent = '';
 
     const diff = Math.abs(elapsed - 10);
@@ -190,6 +194,7 @@
     elapsedEl.textContent = elapsed.toFixed(3) + '秒';
     rankEl.textContent = getRank(diff);
     diffEl.textContent = `目標との差: ${sign}${diff.toFixed(3)}秒`;
+    shareBtn.style.display = 'block';
 
     records.unshift(elapsed);
     if (records.length > 10) records = records.slice(0, 10);
@@ -197,8 +202,20 @@
     renderHistory();
   }
 
+  function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+  function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
+
+  const shareBtn = document.getElementById('share-btn');
+  shareBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const elapsed = parseFloat(elapsedEl.textContent);
+    const diff = Math.abs(elapsed - 10).toFixed(3);
+    shareResult(`ジャスト10秒 ${elapsedEl.textContent} ${rankEl.textContent}\n誤差${diff}秒！あなたは？ → kakera-apps.github.io/apps/timer.html\n#ジャスト10秒 #ミニゲーム集`);
+  });
+
   document.body.addEventListener('click', (e) => {
     if (e.target.closest('.back')) return;
+    if (e.target === shareBtn) return;
     if (state === STATES.IDLE)    { toRunning(); return; }
     if (state === STATES.RUNNING) { toDone();   return; }
     if (state === STATES.DONE)    { toIdle();   return; }

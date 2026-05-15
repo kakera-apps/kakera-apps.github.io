@@ -132,6 +132,7 @@
     font-weight: 700;
     cursor: pointer;
   }
+  .share-btn { background:#1d9bf0 !important;color:#fff !important;padding:12px 32px !important;font-size:0.95rem !important; }
   .start-overlay { }
   .result-overlay { }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
@@ -180,6 +181,7 @@
   <div class="final-score" id="final-score">0</div>
   <div class="rank-label" id="rank-label"></div>
   <div class="best-label" id="best-label"></div>
+  <button class="share-btn" id="share-btn">シェアする 🔗</button>
   <button id="retry-btn">もう一度</button>
 </div>
 
@@ -301,6 +303,13 @@
       score++;
       scoreEl.textContent = score;
     });
+  });
+
+  function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+  function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
+
+  document.getElementById('share-btn').addEventListener('click', () => {
+    shareResult(`もぐら叩き ${score}匹 ${getRank(score)}\nあなたは何匹叩ける？ → kakera-apps.github.io/apps/whack.html\n#もぐら叩き #ミニゲーム集`);
   });
 
   document.getElementById('start-btn').addEventListener('click', startGame);

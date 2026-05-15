@@ -138,6 +138,8 @@
     cursor: pointer;
   }
   .reset-btn:hover { color: #888; border-color: #555; }
+  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:16px;display:none; }
+  .share-btn:active { opacity:0.8; }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
 </style>
 </head>
@@ -176,6 +178,7 @@
     <div class="score-label">負</div>
   </div>
 </div>
+<button class="share-btn" id="share-btn">シェアする 🔗</button>
 <button class="reset-btn" id="reset">リセット</button>
 
 <div class="ad">
@@ -243,8 +246,17 @@
       }
       localStorage.setItem('janken-stats', JSON.stringify(stats));
       renderScore();
+      lastShareText = `じゃんけん ${stats.win}勝${stats.lose}敗${stats.draw}引\nあなたは？ → kakera-apps.github.io/apps/janken.html\n#じゃんけん #ミニゲーム集`;
+      shareBtn.style.display = 'block';
     }, 380);
   }
+
+  function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+  function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
+
+  const shareBtn = document.getElementById('share-btn');
+  let lastShareText = '';
+  shareBtn.addEventListener('click', () => shareResult(lastShareText));
 
   document.querySelectorAll('.btn').forEach(btn => {
     btn.addEventListener('click', () => play(btn.dataset.choice));

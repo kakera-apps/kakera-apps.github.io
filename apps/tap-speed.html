@@ -65,6 +65,8 @@
     cursor: pointer;
   }
   .btn-retry:active { transform: scale(0.96); }
+  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:12px; }
+  .share-btn:active { opacity:0.8; }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
 </style>
 </head>
@@ -98,6 +100,7 @@
   <div id="result-rank"></div>
   <div id="result-best"></div>
   <button class="btn-retry" onclick="showIdle()">もう一度</button>
+  <button class="share-btn" id="share-btn" onclick="doShare()">シェアする 🔗</button>
   <div class="ad">
     <!-- AdSense -->
   </div>
@@ -152,6 +155,10 @@ function onTap(e) {
   taps++;
   document.getElementById('play-count').textContent = taps;
 }
+
+function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
+function doShare(){shareResult(`10秒連打 ${taps}回 ${rank(taps)}\nあなたは何回？ → kakera-apps.github.io/apps/tap-speed.html\n#10秒連打 #ミニゲーム集`);}
 
 function showResult() {
   if (taps > best) { best = taps; localStorage.setItem('tap-best', best); }

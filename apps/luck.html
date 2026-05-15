@@ -102,6 +102,8 @@
     margin-top: 20px;
     letter-spacing: 0.05em;
   }
+  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:20px;display:none; }
+  .share-btn:active { opacity:0.8; }
   .ad { margin-top: 48px; min-height: 50px; width: 320px; }
 
   @keyframes fadeIn {
@@ -125,6 +127,7 @@
 </div>
 
 <button class="oracle-btn" id="oracle-btn">占う</button>
+<button class="share-btn" id="share-btn">シェアする 🔗</button>
 
 <div class="date-note" id="date-note"></div>
 
@@ -185,8 +188,19 @@
   const today = new Date();
   dateNote.textContent = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
 
+  function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+  function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
+
+  const shareBtn = document.getElementById('share-btn');
+  let lastF = null;
+  shareBtn.addEventListener('click', () => {
+    if (!lastF) return;
+    shareResult(`今日の運勢は「${lastF.name}」${lastF.emoji}\n${lastF.comment}\nあなたも占って → kakera-apps.github.io/apps/luck.html\n#今日の運勢 #ミニゲーム集`);
+  });
+
   btn.addEventListener('click', () => {
     const f = drawFortune();
+    lastF = f;
 
     box.classList.remove('revealed', 'fade-in');
     emojiEl.textContent = '';
@@ -200,6 +214,7 @@
       nameEl.textContent     = f.name;
       nameEl.style.color     = f.color;
       commentEl.textContent  = f.comment;
+      shareBtn.style.display = 'block';
     }, 80);
   });
 </script>

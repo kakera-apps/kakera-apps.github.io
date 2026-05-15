@@ -164,6 +164,8 @@
     cursor: pointer;
   }
   .reset-btn:hover { color: #888; border-color: #555; }
+  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:16px;display:none; }
+  .share-btn:active { opacity:0.8; }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
 </style>
 </head>
@@ -189,6 +191,7 @@
 
 <div class="result-text" id="result-text">コインをタップ</div>
 <div class="streak" id="streak"></div>
+<button class="share-btn" id="share-btn" style="display:none">シェアする 🔗</button>
 <div class="tap-hint" id="tap-hint">タップしてコインを投げよう</div>
 
 <div class="stats">
@@ -284,8 +287,19 @@
         streakEl.textContent = '';
       }
       tapHint.textContent = 'タップでもう一度';
+      shareBtn.style.display = 'block';
       flipping = false;
     }, 820);
+  });
+
+  function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+  function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
+
+  const shareBtn = document.getElementById('share-btn');
+  shareBtn.addEventListener('click', () => {
+    const side = data.lastSide === 'heads' ? 'HEADS ☀️' : 'TAILS 🌙';
+    const streak = data.streak >= 2 ? ` ${data.streak}連続！` : '';
+    shareResult(`コイントス ${side}${streak}\nあなたも投げてみて → kakera-apps.github.io/apps/coin.html\n#コイントス #ミニゲーム集`);
   });
 
   document.getElementById('reset-btn').addEventListener('click', () => {
