@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:title" content="今日の運勢 | ミニゲーム集">
+<meta property="og:description" content="タップして運勢を占う。大吉が出るまで粘れ。">
+<meta property="og:url" content="https://kakera-apps.github.io/apps/luck.html">
+<meta property="og:image" content="https://kakera-apps.github.io/ogp.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="今日の運勢 | ミニゲーム集">
+<meta name="twitter:description" content="タップして運勢を占う。大吉が出るまで粘れ。">
 <title>今日の運勢</title>
 <!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
 <!-- Google Analytics -->
@@ -109,6 +117,8 @@
     box-shadow: 0 4px 20px rgba(29,155,240,0.4); display: none;
   }
   .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .x-btn { background: #000; color: #fff; border: none; border-radius: 99px; padding: 14px 28px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .x-btn:active { opacity: 0.7; transform: scale(0.96); }
   .ad { margin-top: 48px; min-height: 50px; width: 320px; }
   @keyframes popIn {
     0%   { transform: scale(0.4); opacity: 0; }
@@ -139,6 +149,7 @@
 
 <button class="oracle-btn" id="oracle-btn">占う</button>
 <button class="share-btn" id="share-btn">シェアする 🔗</button>
+<button class="x-btn" id="x-btn" style="display:none" onclick="xShare()">X でシェア</button>
 
 <div class="date-note" id="date-note"></div>
 
@@ -203,6 +214,7 @@
   function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
 
   const shareBtn = document.getElementById('share-btn');
+  const xBtn = document.getElementById('x-btn');
   let lastF = null;
   shareBtn.addEventListener('click', () => {
     if (!lastF) return;
@@ -226,6 +238,7 @@
       nameEl.style.color     = f.color;
       commentEl.textContent  = f.comment;
       shareBtn.style.display = 'block';
+      xBtn.style.display = 'block';
 
       // pop-inアニメーション
       nameEl.classList.remove('pop-in');
@@ -233,6 +246,7 @@
       nameEl.classList.add('pop-in');
     }, 80);
   });
+function xShare(){if(!lastF)return;const text=`今日の運勢は「${lastF.name}」${lastF.emoji}\n${lastF.comment}\nあなたも占って → kakera-apps.github.io/apps/luck.html\n#今日の運勢 #kakera_app #暇つぶし`;window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text),'_blank');}
 </script>
 </body>
 </html>

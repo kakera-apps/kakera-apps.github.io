@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:title" content="じゃんけん | ミニゲーム集">
+<meta property="og:description" content="CPUとじゃんけん勝負。通算成績を積み上げろ。">
+<meta property="og:url" content="https://kakera-apps.github.io/apps/janken.html">
+<meta property="og:image" content="https://kakera-apps.github.io/ogp.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="じゃんけん | ミニゲーム集">
+<meta name="twitter:description" content="CPUとじゃんけん勝負。通算成績を積み上げろ。">
 <title>じゃんけん</title>
 <!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
 <!-- Google Analytics -->
@@ -145,6 +153,8 @@
     box-shadow: 0 4px 20px rgba(29,155,240,0.4); display: none;
   }
   .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .x-btn { background: #000; color: #fff; border: none; border-radius: 99px; padding: 14px 28px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .x-btn:active { opacity: 0.7; transform: scale(0.96); }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
   @keyframes popIn {
     0%   { transform: scale(0.4); opacity: 0; }
@@ -190,6 +200,7 @@
   </div>
 </div>
 <button class="share-btn" id="share-btn">シェアする 🔗</button>
+<button class="x-btn" id="x-btn" style="display:none" onclick="xShare()">X でシェア</button>
 <button class="reset-btn" id="reset">リセット</button>
 
 <div class="ad">
@@ -259,6 +270,7 @@
       renderScore();
       lastShareText = `じゃんけん ${stats.win}勝${stats.lose}敗${stats.draw}引\nあなたは？ → kakera-apps.github.io/apps/janken.html\n#じゃんけん #kakera_app #暇つぶし`;
       shareBtn.style.display = 'block';
+      xBtn.style.display = 'block';
 
       // pop-inアニメーション
       resultEl.classList.remove('pop-in');
@@ -271,6 +283,7 @@
   function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
 
   const shareBtn = document.getElementById('share-btn');
+  const xBtn = document.getElementById('x-btn');
   let lastShareText = '';
   shareBtn.addEventListener('click', () => shareResult(lastShareText));
 
@@ -289,6 +302,7 @@
       resultEl.className   = 'result-text';
     }
   });
+function xShare(){if(lastShareText)window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(lastShareText),'_blank');}
 </script>
 </body>
 </html>

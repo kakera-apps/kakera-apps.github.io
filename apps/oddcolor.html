@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:title" content="色の仲間外れ | ミニゲーム集">
+<meta property="og:description" content="16マスの中から微妙に違う1色を探せ。難易度が上がるほど差が消える。">
+<meta property="og:url" content="https://kakera-apps.github.io/apps/oddcolor.html">
+<meta property="og:image" content="https://kakera-apps.github.io/ogp.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="色の仲間外れ | ミニゲーム集">
+<meta name="twitter:description" content="16マスの中から微妙に違う1色を探せ。難易度が上がるほど差が消える。">
 <title>色の仲間外れ</title>
 <!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
 <!-- Google Analytics -->
@@ -102,6 +110,8 @@
     box-shadow: 0 4px 20px rgba(29,155,240,0.4);
   }
   .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .x-btn { background: #000; color: #fff; border: none; border-radius: 99px; padding: 14px 28px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .x-btn:active { opacity: 0.7; transform: scale(0.96); }
   .retry-btn {
     background: #222; color: #fff; border: none; border-radius: 99px;
     padding: 12px 36px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
@@ -144,6 +154,7 @@
   <div style="font-size:1rem;opacity:0.5;">まで到達</div>
   <div id="result-best"></div>
   <button class="share-btn" onclick="doShare()">シェアする 🔗</button>
+  <button class="x-btn" onclick="xShare()">X でシェア</button>
   <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
 </div>
 
@@ -299,6 +310,7 @@ function doShare() {
 }
 
 showIdle();
+function xShare(){const lv=document.getElementById('result-level').textContent;window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(`色の仲間外れ レベル${lv}まで到達\nあなたは？ → kakera-apps.github.io/apps/oddcolor.html\n#色の仲間外れ #kakera_app #暇つぶし`),'_blank');}
 </script>
 </body>
 </html>

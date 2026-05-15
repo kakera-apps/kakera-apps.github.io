@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:title" content="もぐら叩き | ミニゲーム集">
+<meta property="og:description" content="30秒で何匹叩ける？出てきたら素早くタップ。">
+<meta property="og:url" content="https://kakera-apps.github.io/apps/whack.html">
+<meta property="og:image" content="https://kakera-apps.github.io/ogp.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="もぐら叩き | ミニゲーム集">
+<meta name="twitter:description" content="30秒で何匹叩ける？出てきたら素早くタップ。">
 <title>もぐら叩き</title>
 <!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
 <!-- Google Analytics -->
@@ -139,6 +147,8 @@
     box-shadow: 0 4px 20px rgba(29,155,240,0.4);
   }
   .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .x-btn { background: #000; color: #fff; border: none; border-radius: 99px; padding: 14px 28px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .x-btn:active { opacity: 0.7; transform: scale(0.96); }
   .start-overlay { }
   .result-overlay { }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
@@ -194,6 +204,7 @@
   <div class="rank-label" id="rank-label"></div>
   <div class="best-label" id="best-label"></div>
   <button class="share-btn" id="share-btn">シェアする 🔗</button>
+  <button class="x-btn" onclick="xShare()">X でシェア</button>
   <button id="retry-btn">もう一度</button>
 </div>
 
@@ -339,6 +350,7 @@
 
   document.getElementById('start-btn').addEventListener('click', startGame);
   document.getElementById('retry-btn').addEventListener('click', startGame);
+function xShare(){window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(`もぐら叩き ${score}匹 ${getRank(score)}\nあなたは何匹叩ける？ → kakera-apps.github.io/apps/whack.html\n#もぐら叩き #kakera_app #暇つぶし`),'_blank');}
 </script>
 </body>
 </html>

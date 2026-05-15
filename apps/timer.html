@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:title" content="ジャスト10秒 | ミニゲーム集">
+<meta property="og:description" content="画面を見ずに10秒を感じろ。感覚の鋭さが問われるゲーム。">
+<meta property="og:url" content="https://kakera-apps.github.io/apps/timer.html">
+<meta property="og:image" content="https://kakera-apps.github.io/ogp.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ジャスト10秒 | ミニゲーム集">
+<meta name="twitter:description" content="画面を見ずに10秒を感じろ。感覚の鋭さが問われるゲーム。">
 <title>ジャスト10秒</title>
 <!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
 <!-- Google Analytics -->
@@ -109,6 +117,8 @@
     box-shadow: 0 4px 20px rgba(29,155,240,0.4); display: none;
   }
   .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .x-btn { background: #000; color: #fff; border: none; border-radius: 99px; padding: 14px 28px; font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .x-btn:active { opacity: 0.7; transform: scale(0.96); }
   .ad { margin-top: 48px; min-height: 50px; width: 320px; }
   @keyframes popIn {
     0%   { transform: scale(0.4); opacity: 0; }
@@ -134,6 +144,7 @@
 <div class="rank-text" id="rank"></div>
 <div class="diff-text" id="diff"></div>
 <button class="share-btn" id="share-btn" style="display:none">シェアする 🔗</button>
+<button class="x-btn" id="x-btn" style="display:none" onclick="xShare()">X でシェア</button>
 <div class="history" id="history"></div>
 
 <div class="ad">
@@ -179,6 +190,7 @@
     rankEl.textContent = '';
     diffEl.textContent = '';
     shareBtn.style.display = 'none';
+    xBtn.style.display = 'none';
   }
 
   function toRunning() {
@@ -206,6 +218,7 @@
     rankEl.textContent = getRank(diff);
     diffEl.textContent = `目標との差: ${sign}${diff.toFixed(3)}秒`;
     shareBtn.style.display = 'block';
+    xBtn.style.display = 'block';
 
     // 誤差に応じて色を変更
     let elColor;
@@ -233,6 +246,7 @@
   function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
 
   const shareBtn = document.getElementById('share-btn');
+  const xBtn = document.getElementById('x-btn');
   shareBtn.addEventListener('click', e => {
     e.stopPropagation();
     const elapsed = parseFloat(elapsedEl.textContent);
@@ -247,6 +261,7 @@
     if (state === STATES.RUNNING) { toDone();   return; }
     if (state === STATES.DONE)    { toIdle();   return; }
   });
+function xShare(){const elapsed=elapsedEl.textContent;const r=rankEl.textContent;const diff=Math.abs(parseFloat(elapsed)-10).toFixed(3);window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(`ジャスト10秒 ${elapsed} ${r}\n誤差${diff}秒！あなたは？ → kakera-apps.github.io/apps/timer.html\n#ジャスト10秒 #kakera_app #暇つぶし`),'_blank');}
 </script>
 </body>
 </html>
