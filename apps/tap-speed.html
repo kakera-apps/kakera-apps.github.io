@@ -53,9 +53,9 @@
 
   .best { font-size: 0.85rem; opacity: 0.4; margin-top: 16px; }
 
-  #result-count { font-size: 6rem; font-weight: 900; line-height: 1; }
+  #result-count { font-size: min(25vw, 9rem); font-weight: 900; line-height: 1; }
   #result-label { font-size: 1rem; opacity: 0.5; margin-bottom: 8px; }
-  #result-rank  { font-size: 1.8rem; margin: 16px 0; }
+  #result-rank  { font-size: 2.2rem; margin: 16px 0; }
   #result-best  { font-size: 0.85rem; opacity: 0.4; margin-bottom: 32px; }
 
   .btn-retry {
@@ -65,9 +65,20 @@
     cursor: pointer;
   }
   .btn-retry:active { transform: scale(0.96); }
-  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:12px; }
-  .share-btn:active { opacity:0.8; }
+  .share-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 20px; letter-spacing: 0.05em;
+    box-shadow: 0 4px 20px rgba(29,155,240,0.4);
+  }
+  .share-btn:active { opacity: 0.8; transform: scale(0.96); }
   .ad { margin-top: 40px; min-height: 50px; width: 320px; }
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 </style>
 </head>
 <body>
@@ -162,11 +173,31 @@ function doShare(){shareResult(`10秒連打 ${taps}回 ${rank(taps)}\nあなた�
 
 function showResult() {
   if (taps > best) { best = taps; localStorage.setItem('tap-best', best); }
-  document.getElementById('result-count').textContent = taps;
-  document.getElementById('result-rank').textContent = rank(taps);
+  const countEl = document.getElementById('result-count');
+  const rankEl  = document.getElementById('result-rank');
+  countEl.textContent = taps;
+  rankEl.textContent  = rank(taps);
   document.getElementById('result-best').textContent = `自己ベスト: ${best}回`;
+
+  // ランクに応じて色変更
+  let color;
+  if (taps >= 150)      color = '#FFD700';
+  else if (taps >= 100) color = '#00dc64';
+  else if (taps >= 70)  color = '#4fc3f7';
+  else if (taps >= 40)  color = '#ffffff';
+  else                  color = '#aaa';
+  countEl.style.color = color;
+
   document.getElementById('state-playing').style.display = 'none';
   document.getElementById('state-result').style.display = 'flex';
+
+  // pop-inアニメーション
+  countEl.classList.remove('pop-in');
+  void countEl.offsetWidth;
+  countEl.classList.add('pop-in');
+  rankEl.classList.remove('pop-in');
+  void rankEl.offsetWidth;
+  rankEl.classList.add('pop-in');
 }
 </script>
 </body>

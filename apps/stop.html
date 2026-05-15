@@ -100,7 +100,7 @@
     justify-content: center;
   }
   .accuracy {
-    font-size: 4rem;
+    font-size: min(22vw, 8rem);
     font-weight: 900;
     line-height: 1;
   }
@@ -119,9 +119,20 @@
     opacity: 0.4;
     margin-top: 12px;
   }
-  .share-btn { background:#1d9bf0;color:#fff;border:none;border-radius:99px;padding:12px 32px;font-size:0.95rem;font-weight:700;cursor:pointer;margin-top:20px; }
-  .share-btn:active { opacity:0.8; }
+  .share-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 20px; letter-spacing: 0.05em;
+    box-shadow: 0 4px 20px rgba(29,155,240,0.4);
+  }
+  .share-btn:active { opacity: 0.8; transform: scale(0.96); }
   .ad { margin-top: 48px; min-height: 50px; width: 320px; }
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 </style>
 </head>
 <body>
@@ -214,8 +225,15 @@
     else if (accuracy >= 40) comment = '😅 惜しい';
     else comment = '💀 ひどい';
 
+    let accColor;
+    if (accuracy >= 95)      accColor = '#FFD700';
+    else if (accuracy >= 80) accColor = '#00dc64';
+    else if (accuracy >= 60) accColor = '#4fc3f7';
+    else if (accuracy >= 40) accColor = '#ffffff';
+    else                     accColor = '#ff4d4d';
+
     result.innerHTML = `
-      <div class="accuracy">${accuracy.toFixed(1)}%</div>
+      <div class="accuracy pop-in" style="color:${accColor}">${accuracy.toFixed(1)}%</div>
       <div class="comment">${comment}</div>
       <button class="share-btn" onclick="shareResult('ちょうど止めろ 精度${accuracy.toFixed(1)}% ${comment}\\nあなたは？ → kakera-apps.github.io/apps/stop.html\\n#ちょうど止めろ #kakera_app #暇つぶし')">シェアする 🔗</button>
     `;
