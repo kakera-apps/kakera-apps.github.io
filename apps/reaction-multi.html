@@ -65,10 +65,10 @@
   }
   .zone-status { font-size: 0.85rem; opacity: 0.4; }
   .zone-time {
-    font-size: min(16vw, 5.5rem); font-weight: 900; line-height: 1;
-    display: none;
+    font-size: min(10vw, 3rem); font-weight: 700; line-height: 1;
+    display: none; opacity: 0.75;
   }
-  .zone-rank { font-size: 1.8rem; display: none; margin-top: 4px; }
+  .zone-rank { font-size: min(18vw, 6rem); display: none; line-height: 1; }
 
   .zone.ready   { border-color: var(--c); background: rgba(255,255,255,0.04); }
   .zone.early   { border-color: #cc0000; background: rgba(200,0,0,0.12); }
@@ -92,23 +92,6 @@
   #overlay.early { background: #cc0000; border-color: #cc0000; }
   #ov-main { font-size: 1.1rem; font-weight: 900; line-height: 1.2; }
   #ov-sub  { font-size: 0.65rem; opacity: 0.7; }
-
-  /* ── もう一度ボタン（結果後） ── */
-  #retry-overlay {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    display: none; justify-content: center;
-    padding: 16px; background: rgba(0,0,0,0.85);
-    gap: 12px; z-index: 30;
-  }
-  #retry-overlay button {
-    background: #fff; color: #000; border: none;
-    border-radius: 99px; padding: 14px 40px;
-    font-size: 1rem; font-weight: 700; cursor: pointer;
-  }
-  #retry-overlay .btn-change {
-    background: #1a1a1a; color: #aaa;
-    border: 1px solid #333;
-  }
 
   @keyframes popIn {
     0%   { transform: scale(0.4); opacity: 0; }
@@ -139,10 +122,6 @@
     <div id="ov-main">準備して</div>
     <div id="ov-sub"></div>
   </div>
-  <div id="retry-overlay">
-    <button class="btn-change" onclick="showSetup()">人数変更</button>
-    <button onclick="init(currentN)">もう一度</button>
-  </div>
 </div>
 
 <script>
@@ -156,20 +135,17 @@ let phase, players, goTime, waitTimer, currentN;
 const overlay    = document.getElementById('overlay');
 const ovMain     = document.getElementById('ov-main');
 const ovSub      = document.getElementById('ov-sub');
-const retryOv    = document.getElementById('retry-overlay');
 const grid       = document.getElementById('grid');
 
 function showSetup() {
   clearTimeout(waitTimer);
   document.getElementById('setup').style.display = 'flex';
   document.getElementById('game').style.display = 'none';
-  retryOv.style.display = 'none';
 }
 
 function init(n) {
   currentN = n;
   clearTimeout(waitTimer);
-  retryOv.style.display = 'none';
   document.getElementById('setup').style.display = 'none';
   document.getElementById('game').style.display = 'block';
 
@@ -248,6 +224,11 @@ function tap(i) {
     if (players.every(x => x.time !== null || x.early)) showResults();
     return;
   }
+
+  if (phase === PHASE.RESULT) {
+    init(currentN);
+    return;
+  }
 }
 
 function startWaiting() {
@@ -307,7 +288,7 @@ function showResults() {
     document.getElementById(`st${p.i}`).style.display = 'block';
   });
 
-  retryOv.style.display = 'flex';
+  setOverlay('タップで\nもう一度', '');
 }
 
 function setOverlay(main, sub) {
