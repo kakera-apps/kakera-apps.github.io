@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>角度当て</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KEGXWEWWCG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KEGXWEWWCG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+  }
+  #back-btn {
+    position: fixed; top: 12px; left: 12px;
+    color: rgba(255,255,255,0.4); text-decoration: none;
+    font-size: 0.85rem; z-index: 100; padding: 6px 10px;
+  }
+  #back-btn:hover { color: #fff; }
+
+  /* IDLE */
+  #state-idle { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+  #state-idle h1 { font-size: 1.8rem; font-weight: 900; }
+  #state-idle p { font-size: 0.9rem; opacity: 0.5; line-height: 1.6; max-width: 280px; }
+  .best-label { font-size: 0.8rem; opacity: 0.35; }
+  .start-btn {
+    background: #fff; color: #000; border: none; border-radius: 99px;
+    padding: 16px 48px; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 8px;
+  }
+  .start-btn:active { transform: scale(0.96); }
+
+  /* PLAYING */
+  #state-playing { display: none; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+  #q-info { font-size: 0.9rem; opacity: 0.5; }
+  #target-angle-label {
+    font-size: 1.1rem; opacity: 0.7;
+  }
+  #target-angle-value {
+    font-size: 3.5rem; font-weight: 900; line-height: 1; color: #ffd700;
+  }
+
+  #svg-area {
+    touch-action: none;
+    cursor: crosshair;
+    display: block;
+  }
+
+  #current-angle-label { font-size: 1rem; opacity: 0.5; min-height: 1.4em; }
+
+  .decide-btn {
+    background: #fff; color: #000; border: none; border-radius: 99px;
+    padding: 14px 48px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  }
+  .decide-btn:active { transform: scale(0.96); }
+
+  /* FEEDBACK */
+  #feedback-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; text-align: center; z-index: 50;
+  }
+  #feedback-rank-icon { font-size: 4rem; }
+  #feedback-err { font-size: 2rem; font-weight: 900; }
+  #feedback-sub { font-size: 0.9rem; opacity: 0.5; }
+  #feedback-next {
+    background: #fff; color: #000; border: none; border-radius: 99px;
+    padding: 14px 48px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px;
+  }
+
+  /* RESULT */
+  #state-result { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  #result-avg { font-size: clamp(4rem, 20vw, 7rem); font-weight: 900; line-height: 1; color: #ffd700; }
+  #result-list { font-size: 0.85rem; opacity: 0.4; line-height: 1.9; }
+  #result-best { font-size: 0.8rem; opacity: 0.35; }
+
+  .share-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 12px; letter-spacing: 0.05em;
+    box-shadow: 0 4px 20px rgba(29,155,240,0.4);
+  }
+  .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .retry-btn {
+    background: #222; color: #fff; border: none; border-radius: 99px;
+    padding: 12px 36px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  }
+  .retry-btn:active { transform: scale(0.96); }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+</style>
+</head>
+<body>
+
+<a href="../index.html" id="back-btn">← 戻る</a>
+
+<div id="state-idle">
+  <h1>📐 角度当て</h1>
+  <p>目標角度が表示されます。<br>ドラッグして線を目標角度に合わせ、「決定」を押してください。<br>5問の平均誤差を競います。</p>
+  <p class="best-label" id="idle-best"></p>
+  <button class="start-btn" onclick="startGame()">スタート</button>
+</div>
+
+<div id="state-playing">
+  <div id="q-info">問題 1 / 5</div>
+  <div id="target-angle-label">目標角度</div>
+  <div id="target-angle-value">—°</div>
+
+  <svg id="svg-area" width="300" height="300" viewBox="0 0 300 300">
+    <!-- base horizontal reference line -->
+    <line x1="30" y1="150" x2="270" y2="150" stroke="#333" stroke-width="2" stroke-dasharray="6 4"/>
+    <!-- 0° label -->
+    <text x="278" y="154" fill="#555" font-size="11" font-family="sans-serif">0°</text>
+    <!-- user line -->
+    <line id="user-line" x1="150" y1="150" x2="270" y2="150"
+          stroke="#4fc3f7" stroke-width="3" stroke-linecap="round"/>
+    <!-- center dot -->
+    <circle cx="150" cy="150" r="6" fill="#fff"/>
+    <!-- angle arc indicator -->
+    <path id="angle-arc" d="" fill="none" stroke="#ffd70066" stroke-width="2"/>
+  </svg>
+
+  <div id="current-angle-label">ドラッグして角度を調整</div>
+  <button class="decide-btn" onclick="decide()">決定</button>
+</div>
+
+<!-- feedback popup -->
+<div id="feedback-overlay">
+  <div id="feedback-rank-icon"></div>
+  <div id="feedback-err"></div>
+  <div id="feedback-sub"></div>
+  <button id="feedback-next" onclick="nextQuestion()">次へ →</button>
+</div>
+
+<div id="state-result">
+  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">5問の平均誤差</div>
+  <div id="result-avg">0</div>
+  <div style="font-size:1rem;opacity:0.5;">度</div>
+  <div id="result-rank" style="font-size:2rem;margin-top:4px;"></div>
+  <div id="result-list"></div>
+  <div id="result-best"></div>
+  <button class="share-btn" onclick="doShare()">シェアする 🔗</button>
+  <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
+</div>
+
+<script>
+const TOTAL_Q = 5;
+const CX = 150, CY = 150, R = 110;
+
+let questionNum = 0;
+let targetAngle = 90;
+let currentAngle = 0; // degrees from 0° (rightward), measured counter-clockwise (SVG-flipped)
+let errors = [];
+
+function showIdle() {
+  document.getElementById('state-idle').style.display = 'flex';
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'none';
+  document.getElementById('feedback-overlay').style.display = 'none';
+  const best = parseFloat(localStorage.getItem('angle-best') || '999');
+  document.getElementById('idle-best').textContent = best < 999 ? `自己ベスト: 平均誤差 ${best}°` : '';
+}
+
+function startGame() {
+  questionNum = 0; errors = [];
+  document.getElementById('state-idle').style.display = 'none';
+  document.getElementById('state-playing').style.display = 'flex';
+  document.getElementById('state-result').style.display = 'none';
+  nextQuestion();
+}
+
+function nextQuestion() {
+  document.getElementById('feedback-overlay').style.display = 'none';
+  questionNum++;
+  document.getElementById('q-info').textContent = `問題 ${questionNum} / ${TOTAL_Q}`;
+  // random target 5–175°
+  targetAngle = 5 + Math.floor(Math.random() * 171);
+  document.getElementById('target-angle-value').textContent = targetAngle + '°';
+  currentAngle = 0; // start at 0° (pointing right)
+  document.getElementById('current-angle-label').textContent = 'ドラッグして角度を調整';
+  updateLine();
+}
+
+function getAngleFromEvent(e) {
+  const svg = document.getElementById('svg-area');
+  const rect = svg.getBoundingClientRect();
+  const scaleX = 300 / rect.width;
+  const scaleY = 300 / rect.height;
+  let clientX, clientY;
+  if (e.touches && e.touches.length > 0) {
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else if (e.changedTouches && e.changedTouches.length > 0) {
+    clientX = e.changedTouches[0].clientX;
+    clientY = e.changedTouches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  const svgX = (clientX - rect.left) * scaleX;
+  const svgY = (clientY - rect.top)  * scaleY;
+  const dx = svgX - CX;
+  const dy = svgY - CY;
+  // atan2 gives angle from +x axis, clockwise in SVG coords
+  // We want counter-clockwise from +x (standard math), so negate dy
+  let angle = Math.atan2(-dy, dx) * 180 / Math.PI;
+  if (angle < 0) angle += 360;
+  if (angle > 180) angle = 360 - angle; // clamp to 0-180
+  return Math.round(angle);
+}
+
+function updateLine() {
+  // Convert angle (0° = right, 90° = up, 180° = left) to SVG coords
+  const rad = currentAngle * Math.PI / 180;
+  const ex = CX + R * Math.cos(rad);
+  const ey = CY - R * Math.sin(rad); // SVG y is inverted
+  document.getElementById('user-line').setAttribute('x2', ex);
+  document.getElementById('user-line').setAttribute('y2', ey);
+
+  // Draw arc from 0° to currentAngle
+  if (currentAngle > 0 && currentAngle < 180) {
+    const arcR = 40;
+    const ax = CX + arcR * Math.cos(rad);
+    const ay = CY - arcR * Math.sin(rad);
+    document.getElementById('angle-arc').setAttribute('d',
+      `M ${CX + arcR} ${CY} A ${arcR} ${arcR} 0 0 0 ${ax} ${ay}`);
+  } else {
+    document.getElementById('angle-arc').setAttribute('d', '');
+  }
+  document.getElementById('current-angle-label').textContent = `現在: ${currentAngle}°`;
+}
+
+const svg = document.getElementById('svg-area');
+let dragging = false;
+
+svg.addEventListener('mousedown', e => { dragging = true; onMove(e); });
+svg.addEventListener('touchstart', e => { e.preventDefault(); dragging = true; onMove(e); }, { passive: false });
+
+document.addEventListener('mousemove', e => { if (dragging) onMove(e); });
+svg.addEventListener('touchmove', e => { e.preventDefault(); if (dragging) onMove(e); }, { passive: false });
+
+document.addEventListener('mouseup', () => { dragging = false; });
+svg.addEventListener('touchend', () => { dragging = false; });
+
+function onMove(e) {
+  currentAngle = getAngleFromEvent(e);
+  updateLine();
+}
+
+function decide() {
+  const err = Math.abs(currentAngle - targetAngle);
+  errors.push(err);
+
+  let icon, msg;
+  if (err <= 1)  { icon = '🎯'; msg = `誤差 ${err}° — 完璧！`; }
+  else if (err <= 3)  { icon = '⭐'; msg = `誤差 ${err}° — すごい！`; }
+  else if (err <= 8)  { icon = '👍'; msg = `誤差 ${err}° — 良い`; }
+  else                { icon = '😅'; msg = `誤差 ${err}° — もっと頑張れ！`; }
+
+  document.getElementById('feedback-rank-icon').textContent = icon;
+  document.getElementById('feedback-err').textContent = msg;
+  document.getElementById('feedback-sub').textContent =
+    `目標: ${targetAngle}° / あなた: ${currentAngle}°`;
+  const nextBtn = document.getElementById('feedback-next');
+  nextBtn.textContent = questionNum < TOTAL_Q ? '次へ →' : '結果を見る';
+  nextBtn.onclick = questionNum < TOTAL_Q ? nextQuestion : showResult;
+
+  document.getElementById('feedback-overlay').style.display = 'flex';
+}
+
+function rank(avg) {
+  if (avg <= 1)  return '🎯 神の眼';
+  if (avg <= 3)  return '⭐ すごい';
+  if (avg <= 8)  return '👍 良い';
+  return '😅 センスを磨け';
+}
+
+function showResult() {
+  document.getElementById('feedback-overlay').style.display = 'none';
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'flex';
+
+  const avg = Math.round(errors.reduce((a,b)=>a+b,0) / errors.length * 10) / 10;
+  const r = rank(avg);
+
+  const avgEl = document.getElementById('result-avg');
+  avgEl.textContent = avg;
+  document.getElementById('result-rank').textContent = r;
+
+  const listLines = errors.map((e, i) => `問題${i+1}: 誤差 ${e}°`).join('\n');
+  document.getElementById('result-list').textContent = listLines;
+
+  const best = parseFloat(localStorage.getItem('angle-best') || '999');
+  if (avg < best) {
+    localStorage.setItem('angle-best', avg);
+    document.getElementById('result-best').textContent = '🎉 新記録！';
+  } else {
+    document.getElementById('result-best').textContent = `自己ベスト: ${best}°`;
+  }
+
+  avgEl.classList.remove('pop-in');
+  void avgEl.offsetWidth;
+  avgEl.classList.add('pop-in');
+}
+
+function showToast(m) {
+  const t = document.createElement('div');
+  t.textContent = m;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+    background:'#fff', color:'#000', padding:'10px 20px', borderRadius:'99px',
+    fontSize:'0.9rem', fontWeight:'700', zIndex:'999', pointerEvents:'none', whiteSpace:'nowrap'
+  });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function doShare() {
+  const avgErr = document.getElementById('result-avg').textContent;
+  const r = document.getElementById('result-rank').textContent;
+  const text = `角度当て 平均誤差${avgErr}° ${r}\nあなたは？ → kakera-apps.github.io/apps/angle.html\n#角度当て #kakera_app #暇つぶし`;
+  if (navigator.share) { navigator.share({ text }); }
+  else { navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')); }
+}
+
+showIdle();
+</script>
+</body>
+</html>

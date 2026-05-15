@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>色の仲間外れ</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KEGXWEWWCG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KEGXWEWWCG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+  }
+  #back-btn {
+    position: fixed; top: 12px; left: 12px;
+    color: rgba(255,255,255,0.4); text-decoration: none;
+    font-size: 0.85rem; z-index: 100; padding: 6px 10px;
+  }
+  #back-btn:hover { color: #fff; }
+
+  /* IDLE */
+  #state-idle { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+  #state-idle h1 { font-size: 1.8rem; font-weight: 900; }
+  #state-idle p { font-size: 0.9rem; opacity: 0.5; line-height: 1.6; max-width: 280px; }
+  .best-label { font-size: 0.8rem; opacity: 0.35; }
+  .start-btn {
+    background: #fff; color: #000; border: none; border-radius: 99px;
+    padding: 16px 48px; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 8px;
+  }
+  .start-btn:active { transform: scale(0.96); }
+
+  /* PLAYING */
+  #state-playing { display: none; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 380px; }
+
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+  .lives { font-size: 1.2rem; letter-spacing: 4px; }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .cell {
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    border: 2px solid transparent;
+  }
+  .cell:active { transform: scale(0.93); }
+  .cell.flash-correct { animation: flashGreen 0.35s ease; }
+  .cell.flash-wrong   { animation: flashRed 0.35s ease; }
+
+  @keyframes flashGreen { 0%,100%{filter:brightness(1)} 50%{filter:brightness(2) saturate(0.5) sepia(1) hue-rotate(80deg)} }
+  @keyframes flashRed   { 0%,100%{filter:brightness(1)} 50%{filter:brightness(2) saturate(0.5) sepia(1) hue-rotate(-20deg)} }
+
+  #screen-flash {
+    position: fixed; inset: 0; pointer-events: none; z-index: 10; opacity: 0;
+    transition: opacity 0.15s;
+  }
+  #screen-flash.green { background: #00dc64; opacity: 0.25; }
+  #screen-flash.red   { background: #ff4d4d; opacity: 0.25; }
+
+  #level-label { font-size: 1rem; font-weight: 700; }
+  #diff-label  { font-size: 0.8rem; opacity: 0.35; }
+
+  /* RESULT */
+  #state-result { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  #result-level { font-size: clamp(4rem, 22vw, 8rem); font-weight: 900; line-height: 1; color: #ffd700; }
+  #result-best  { font-size: 0.85rem; opacity: 0.35; }
+
+  .share-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 12px; letter-spacing: 0.05em;
+    box-shadow: 0 4px 20px rgba(29,155,240,0.4);
+  }
+  .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .retry-btn {
+    background: #222; color: #fff; border: none; border-radius: 99px;
+    padding: 12px 36px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  }
+  .retry-btn:active { transform: scale(0.96); }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+</style>
+</head>
+<body>
+
+<a href="../index.html" id="back-btn">← 戻る</a>
+<div id="screen-flash"></div>
+
+<div id="state-idle">
+  <h1>🎨 色の仲間外れ</h1>
+  <p>16マスの中から、微妙に違う1色を探してタップ。<br>残機3つ、レベルが上がるほど色の差が小さくなる！</p>
+  <p class="best-label" id="idle-best"></p>
+  <button class="start-btn" onclick="startGame()">スタート</button>
+</div>
+
+<div id="state-playing">
+  <div class="hud">
+    <span>レベル <span id="hud-level">1</span></span>
+    <span class="lives" id="hud-lives">❤️❤️❤️</span>
+  </div>
+  <div id="level-label">Hue差: <span id="hud-diff">20</span>°</div>
+  <div id="grid"></div>
+  <div id="diff-label">微妙に違うマスを探せ！</div>
+</div>
+
+<div id="state-result">
+  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">レベル</div>
+  <div id="result-level">1</div>
+  <div style="font-size:1rem;opacity:0.5;">まで到達</div>
+  <div id="result-best"></div>
+  <button class="share-btn" onclick="doShare()">シェアする 🔗</button>
+  <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
+</div>
+
+<script>
+const GRID_SIZE = 16;
+const CORRECT_IDX_KEY = 'odd-idx';
+const HUE_START = 20;
+const HUE_MIN = 3;
+const HUE_DEC = 1.5;
+
+let level = 1;
+let lives = 3;
+let correctIdx = -1;
+let canTap = true;
+
+function hueDiff(lv) {
+  return Math.max(HUE_MIN, HUE_START - (lv - 1) * HUE_DEC);
+}
+
+function hslStr(h, s, l) {
+  return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+function showIdle() {
+  document.getElementById('state-idle').style.display = 'flex';
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'none';
+  const best = parseInt(localStorage.getItem('oddcolor-best') || '0');
+  document.getElementById('idle-best').textContent = best ? `自己ベスト: レベル${best}` : '';
+}
+
+function startGame() {
+  level = 1; lives = 3; canTap = true;
+  document.getElementById('state-idle').style.display = 'none';
+  document.getElementById('state-playing').style.display = 'flex';
+  document.getElementById('state-result').style.display = 'none';
+  renderGrid();
+}
+
+function renderGrid() {
+  canTap = true;
+  document.getElementById('hud-level').textContent = level;
+  const diff = hueDiff(level);
+  document.getElementById('hud-diff').textContent = Math.round(diff);
+  document.getElementById('hud-lives').textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+
+  const baseH = Math.floor(Math.random() * 360);
+  const baseS = 55 + Math.floor(Math.random() * 25);
+  const baseL = 40 + Math.floor(Math.random() * 20);
+
+  correctIdx = Math.floor(Math.random() * GRID_SIZE);
+  // odd color: shift hue
+  const oddH = (baseH + diff) % 360;
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < GRID_SIZE; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const isOdd = (i === correctIdx);
+    cell.style.background = isOdd ? hslStr(oddH, baseS, baseL) : hslStr(baseH, baseS, baseL);
+    cell.dataset.idx = i;
+    cell.addEventListener('click', () => onCellTap(i, cell));
+    cell.addEventListener('touchstart', (e) => { e.preventDefault(); onCellTap(i, cell); }, { passive: false });
+    grid.appendChild(cell);
+  }
+}
+
+function screenFlash(type) {
+  const el = document.getElementById('screen-flash');
+  el.className = type;
+  setTimeout(() => { el.className = ''; }, 300);
+}
+
+function onCellTap(idx, cell) {
+  if (!canTap) return;
+  canTap = false;
+
+  if (idx === correctIdx) {
+    cell.classList.add('flash-correct');
+    screenFlash('green');
+    level++;
+    setTimeout(() => {
+      cell.classList.remove('flash-correct');
+      renderGrid();
+    }, 500);
+  } else {
+    cell.classList.add('flash-wrong');
+    screenFlash('red');
+    lives--;
+    document.getElementById('hud-lives').textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+    if (lives <= 0) {
+      setTimeout(showResult, 500);
+    } else {
+      setTimeout(() => {
+        cell.classList.remove('flash-wrong');
+        canTap = true;
+      }, 500);
+    }
+  }
+}
+
+function showResult() {
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'flex';
+
+  const lvlEl = document.getElementById('result-level');
+  lvlEl.textContent = level;
+
+  const best = parseInt(localStorage.getItem('oddcolor-best') || '0');
+  if (level > best) {
+    localStorage.setItem('oddcolor-best', level);
+    document.getElementById('result-best').textContent = '🎉 新記録！';
+  } else {
+    document.getElementById('result-best').textContent = `自己ベスト: レベル${best}`;
+  }
+
+  lvlEl.classList.remove('pop-in');
+  void lvlEl.offsetWidth;
+  lvlEl.classList.add('pop-in');
+}
+
+function showToast(m) {
+  const t = document.createElement('div');
+  t.textContent = m;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+    background:'#fff', color:'#000', padding:'10px 20px', borderRadius:'99px',
+    fontSize:'0.9rem', fontWeight:'700', zIndex:'999', pointerEvents:'none', whiteSpace:'nowrap'
+  });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function doShare() {
+  const lv = document.getElementById('result-level').textContent;
+  const text = `色の仲間外れ レベル${lv}まで到達\nあなたは？ → kakera-apps.github.io/apps/oddcolor.html\n#色の仲間外れ #kakera_app #暇つぶし`;
+  if (navigator.share) { navigator.share({ text }); }
+  else { navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')); }
+}
+
+showIdle();
+</script>
+</body>
+</html>

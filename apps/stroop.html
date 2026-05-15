@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ストループテスト</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KEGXWEWWCG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KEGXWEWWCG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+  }
+  #back-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    color: rgba(255,255,255,0.4);
+    text-decoration: none;
+    font-size: 0.85rem;
+    z-index: 100;
+    padding: 6px 10px;
+  }
+  #back-btn:hover { color: #fff; }
+
+  /* --- IDLE --- */
+  #state-idle { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  #state-idle h1 { font-size: 1.8rem; font-weight: 900; }
+  #state-idle p { font-size: 0.9rem; opacity: 0.5; text-align: center; line-height: 1.6; max-width: 280px; }
+  .best-label { font-size: 0.8rem; opacity: 0.35; }
+  .start-btn {
+    background: #fff; color: #000;
+    border: none; border-radius: 99px;
+    padding: 16px 48px; font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; margin-top: 8px;
+  }
+  .start-btn:active { transform: scale(0.96); }
+
+  /* --- PLAYING --- */
+  #state-playing { display: none; flex-direction: column; align-items: center; width: 100%; max-width: 360px; gap: 0; }
+
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+  .hud span { font-weight: 700; }
+
+  #timer-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: #2a2a2a;
+    border-radius: 99px;
+    margin-bottom: 40px;
+    overflow: hidden;
+  }
+  #timer-bar {
+    height: 100%;
+    background: #4fc3f7;
+    border-radius: 99px;
+    width: 100%;
+    transition: width 0.1s linear;
+  }
+
+  #word-display {
+    font-size: clamp(3rem, 16vw, 6rem);
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    margin-bottom: 48px;
+    min-height: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #color-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+  }
+  .color-btn {
+    border: none;
+    border-radius: 16px;
+    padding: 20px 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    transition: transform 0.1s, opacity 0.1s;
+    letter-spacing: 0.05em;
+  }
+  .color-btn:active { transform: scale(0.94); opacity: 0.8; }
+  .color-btn.correct { animation: flashCorrect 0.25s ease; }
+  .color-btn.wrong   { animation: flashWrong 0.25s ease; }
+  @keyframes flashCorrect { 0%,100%{opacity:1} 50%{opacity:0.5;transform:scale(1.06)} }
+  @keyframes flashWrong   { 0%,100%{opacity:1} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+  /* --- RESULT --- */
+  #state-result { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  #result-score { font-size: clamp(4rem, 22vw, 8rem); font-weight: 900; line-height: 1; color: #4fc3f7; }
+  #result-label { font-size: 1rem; opacity: 0.5; }
+  #result-miss  { font-size: 1.2rem; opacity: 0.6; }
+  #result-best  { font-size: 0.85rem; opacity: 0.35; }
+
+  .share-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 12px; letter-spacing: 0.05em;
+    box-shadow: 0 4px 20px rgba(29,155,240,0.4);
+  }
+  .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .retry-btn {
+    background: #222; color: #fff; border: none; border-radius: 99px;
+    padding: 12px 36px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  }
+  .retry-btn:active { transform: scale(0.96); }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+</style>
+</head>
+<body>
+
+<a href="../index.html" id="back-btn">← 戻る</a>
+
+<div id="state-idle">
+  <h1>🧠 ストループテスト</h1>
+  <p>「あか」と書かれた青い文字——<br>文字の<strong>色</strong>を選んでください。<br>60秒で何問正解できる？</p>
+  <p class="best-label" id="idle-best"></p>
+  <button class="start-btn" onclick="startGame()">スタート</button>
+</div>
+
+<div id="state-playing">
+  <div class="hud">
+    <span>正解: <span id="hud-score">0</span></span>
+    <span>ミス: <span id="hud-miss">0</span></span>
+    <span>残り <span id="hud-time">60</span>秒</span>
+  </div>
+  <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+  <div id="word-display"></div>
+  <div id="color-btns">
+    <button class="color-btn" style="background:#ff4d4d" data-color="赤" onclick="answer('赤')">赤</button>
+    <button class="color-btn" style="background:#4fc3f7" data-color="青" onclick="answer('青')">青</button>
+    <button class="color-btn" style="background:#00dc64" data-color="緑" onclick="answer('緑')">緑</button>
+    <button class="color-btn" style="background:#ffd700;color:#000" data-color="黄" onclick="answer('黄')">黄</button>
+  </div>
+</div>
+
+<div id="state-result">
+  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">60秒の結果</div>
+  <div id="result-score">0</div>
+  <div id="result-label">問正解</div>
+  <div id="result-miss"></div>
+  <div id="result-best"></div>
+  <button class="share-btn" id="share-btn" onclick="doShare()">シェアする 🔗</button>
+  <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
+</div>
+
+<script>
+const COLORS = [
+  { name: '赤', hex: '#ff4d4d' },
+  { name: '青', hex: '#4fc3f7' },
+  { name: '緑', hex: '#00dc64' },
+  { name: '黄', hex: '#ffd700' },
+];
+
+let score = 0, miss = 0, timeLeft = 60, interval = null;
+let correctColor = '';
+
+function showIdle() {
+  document.getElementById('state-idle').style.display = 'flex';
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'none';
+  const best = parseInt(localStorage.getItem('stroop-best') || '0');
+  document.getElementById('idle-best').textContent = best ? `自己ベスト: ${best}問正解` : '';
+}
+
+function startGame() {
+  score = 0; miss = 0; timeLeft = 60;
+  document.getElementById('state-idle').style.display = 'none';
+  document.getElementById('state-playing').style.display = 'flex';
+  document.getElementById('state-result').style.display = 'none';
+  document.getElementById('hud-score').textContent = 0;
+  document.getElementById('hud-miss').textContent = 0;
+  document.getElementById('hud-time').textContent = 60;
+  document.getElementById('timer-bar').style.width = '100%';
+  nextQuestion();
+
+  interval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('hud-time').textContent = timeLeft;
+    document.getElementById('timer-bar').style.width = (timeLeft / 60 * 100) + '%';
+    if (timeLeft <= 0) {
+      clearInterval(interval);
+      showResult();
+    }
+  }, 1000);
+}
+
+function nextQuestion() {
+  const wordIdx  = Math.floor(Math.random() * COLORS.length);
+  let colorIdx;
+  do { colorIdx = Math.floor(Math.random() * COLORS.length); } while (colorIdx === wordIdx);
+
+  const word  = COLORS[wordIdx];
+  const color = COLORS[colorIdx];
+  correctColor = color.name;
+
+  const el = document.getElementById('word-display');
+  el.textContent = word.name;
+  el.style.color = color.hex;
+}
+
+function answer(chosen) {
+  if (timeLeft <= 0) return;
+  const btn = [...document.querySelectorAll('.color-btn')].find(b => b.dataset.color === chosen);
+  if (chosen === correctColor) {
+    score++;
+    document.getElementById('hud-score').textContent = score;
+    if (btn) { btn.classList.remove('correct'); void btn.offsetWidth; btn.classList.add('correct'); }
+    nextQuestion();
+  } else {
+    miss++;
+    document.getElementById('hud-miss').textContent = miss;
+    if (btn) { btn.classList.remove('wrong'); void btn.offsetWidth; btn.classList.add('wrong'); }
+  }
+}
+
+function showResult() {
+  document.getElementById('state-playing').style.display = 'none';
+  document.getElementById('state-result').style.display = 'flex';
+
+  const scoreEl = document.getElementById('result-score');
+  scoreEl.textContent = score;
+  document.getElementById('result-miss').textContent = `ミス ${miss} 回`;
+
+  const best = parseInt(localStorage.getItem('stroop-best') || '0');
+  if (score > best) {
+    localStorage.setItem('stroop-best', score);
+    document.getElementById('result-best').textContent = '🎉 新記録！';
+  } else {
+    document.getElementById('result-best').textContent = `自己ベスト: ${best}問`;
+  }
+
+  scoreEl.classList.remove('pop-in');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('pop-in');
+}
+
+function showToast(m) {
+  const t = document.createElement('div');
+  t.textContent = m;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+    background:'#fff', color:'#000', padding:'10px 20px', borderRadius:'99px',
+    fontSize:'0.9rem', fontWeight:'700', zIndex:'999', pointerEvents:'none',
+    whiteSpace:'nowrap'
+  });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function doShare() {
+  const text = `ストループテスト ${score}問正解（ミス${miss}回）\nあなたは？ → kakera-apps.github.io/apps/stroop.html\n#ストループテスト #kakera_app #暇つぶし`;
+  if (navigator.share) {
+    navigator.share({ text });
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('コピーしました！'));
+  }
+}
+
+showIdle();
+</script>
+</body>
+</html>

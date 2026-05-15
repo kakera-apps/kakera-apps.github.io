@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>長押し耐久</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KEGXWEWWCG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KEGXWEWWCG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+    touch-action: none;
+  }
+  #back-btn {
+    position: fixed; top: 12px; left: 12px;
+    color: rgba(255,255,255,0.4); text-decoration: none;
+    font-size: 0.85rem; z-index: 100; padding: 6px 10px;
+  }
+  #back-btn:hover { color: #fff; }
+
+  /* IDLE */
+  #state-idle { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+  #state-idle h1 { font-size: 1.8rem; font-weight: 900; }
+  #state-idle p { font-size: 0.9rem; opacity: 0.5; line-height: 1.6; max-width: 280px; }
+  .hint-closed-eyes { font-size: 0.85rem; opacity: 0.4; font-style: italic; }
+  .best-label { font-size: 0.8rem; opacity: 0.35; }
+
+  /* HOLD BUTTON */
+  #hold-btn {
+    width: min(68vw, 260px);
+    height: min(68vw, 260px);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background: radial-gradient(circle at 40% 35%, #4a4a6a, #1a1a2e);
+    box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 10px #2a2a3e;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #hold-btn.pressing {
+    background: radial-gradient(circle at 40% 35%, #ff8a00, #cc2200);
+    box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 10px #ff4d4d44, 0 0 60px rgba(255,100,0,0.5);
+  }
+  #hold-btn:active { transform: scale(0.96); }
+
+  #btn-icon { font-size: 2.8rem; }
+  #btn-label { font-size: 0.95rem; opacity: 0.8; }
+  #btn-timer {
+    font-size: 2.5rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    display: none;
+  }
+
+  /* ring progress */
+  #ring-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  #ring-progress {
+    fill: none;
+    stroke: rgba(255,255,255,0.25);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 0 1000;
+    transition: stroke-dasharray 0.1s linear;
+    transform-origin: center;
+    transform: rotate(-90deg);
+  }
+
+  #state-idle-btn { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+  /* RESULT */
+  #state-result { display: none; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  #result-time { font-size: clamp(4rem, 22vw, 8rem); font-weight: 900; line-height: 1; color: #ff8a00; }
+  #result-unit { font-size: 1rem; opacity: 0.5; }
+  #result-rank { font-size: 2rem; }
+  #result-best { font-size: 0.85rem; opacity: 0.35; }
+
+  .share-btn {
+    background: #1d9bf0; color: #fff; border: none; border-radius: 99px;
+    padding: 14px 40px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    margin-top: 12px; letter-spacing: 0.05em;
+    box-shadow: 0 4px 20px rgba(29,155,240,0.4);
+  }
+  .share-btn:active { opacity: 0.8; transform: scale(0.96); }
+  .retry-btn {
+    background: #222; color: #fff; border: none; border-radius: 99px;
+    padding: 12px 36px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  }
+  .retry-btn:active { transform: scale(0.96); }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 10px #ff4d4d44, 0 0 40px rgba(255,100,0,0.3); }
+    50%      { box-shadow: 0 0 0 8px #1a1a2e, 0 0 0 12px #ff4d4d66, 0 0 80px rgba(255,100,0,0.6); }
+  }
+  #hold-btn.pressing { animation: pulse 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<a href="../index.html" id="back-btn">← 戻る</a>
+
+<div id="state-idle">
+  <h1>👆 長押し耐久</h1>
+  <p>大きなボタンを長押しし続けろ。<br>離した瞬間に記録！</p>
+  <p class="hint-closed-eyes">目を閉じて挑戦すると公平だよ 👀</p>
+  <p class="best-label" id="idle-best"></p>
+
+  <div id="state-idle-btn">
+    <div id="hold-btn">
+      <svg id="ring-svg" viewBox="0 0 260 260">
+        <circle id="ring-progress" cx="130" cy="130" r="120"/>
+      </svg>
+      <div id="btn-icon">👆</div>
+      <div id="btn-label">長押しスタート</div>
+      <div id="btn-timer">0.0</div>
+    </div>
+  </div>
+</div>
+
+<div id="state-result">
+  <div style="font-size:1rem;opacity:0.5;margin-bottom:4px;">耐えた時間</div>
+  <div id="result-time">0.0</div>
+  <div id="result-unit">秒</div>
+  <div id="result-rank"></div>
+  <div id="result-best"></div>
+  <button class="share-btn" onclick="doShare()">シェアする 🔗</button>
+  <button class="retry-btn" onclick="showIdle()" style="margin-top:8px;">もう一度</button>
+</div>
+
+<script>
+const CIRCUMFERENCE = 2 * Math.PI * 120; // r=120
+
+let pressStart = 0;
+let timerInterval = null;
+let elapsed = 0;
+let isHolding = false;
+const MIN_HOLD = 0.3; // seconds, ignore taps shorter than this
+
+const holdBtn = document.getElementById('hold-btn');
+const btnTimer = document.getElementById('btn-timer');
+const btnIcon  = document.getElementById('btn-icon');
+const btnLabel = document.getElementById('btn-label');
+const ringProgress = document.getElementById('ring-progress');
+
+function showIdle() {
+  document.getElementById('state-idle').style.display = 'flex';
+  document.getElementById('state-result').style.display = 'none';
+  isHolding = false;
+  holdBtn.classList.remove('pressing');
+  btnTimer.style.display = 'none';
+  btnIcon.style.display = '';
+  btnLabel.style.display = '';
+  btnLabel.textContent = '長押しスタート';
+  ringProgress.style.strokeDasharray = '0 1000';
+
+  const best = parseFloat(localStorage.getItem('hold-best') || '0');
+  document.getElementById('idle-best').textContent = best ? `自己ベスト: ${best.toFixed(1)}秒` : '';
+}
+
+function startHold() {
+  if (isHolding) return;
+  isHolding = true;
+  pressStart = performance.now();
+  elapsed = 0;
+  holdBtn.classList.add('pressing');
+  btnIcon.style.display = 'none';
+  btnLabel.style.display = 'none';
+  btnTimer.style.display = '';
+  btnTimer.textContent = '0.0';
+  ringProgress.style.strokeDasharray = '0 1000';
+
+  timerInterval = setInterval(() => {
+    elapsed = (performance.now() - pressStart) / 1000;
+    btnTimer.textContent = elapsed.toFixed(1);
+    // ring: complete circle at 60s
+    const dashLen = Math.min(CIRCUMFERENCE, (elapsed / 60) * CIRCUMFERENCE);
+    ringProgress.style.strokeDasharray = `${dashLen} ${CIRCUMFERENCE}`;
+  }, 100);
+}
+
+function endHold() {
+  if (!isHolding) return;
+  isHolding = false;
+  clearInterval(timerInterval);
+  elapsed = (performance.now() - pressStart) / 1000;
+
+  if (elapsed < MIN_HOLD) {
+    // too short, reset
+    holdBtn.classList.remove('pressing');
+    btnTimer.style.display = 'none';
+    btnIcon.style.display = '';
+    btnLabel.style.display = '';
+    btnLabel.textContent = '長押しスタート';
+    ringProgress.style.strokeDasharray = '0 1000';
+    return;
+  }
+
+  showResult(elapsed);
+}
+
+// Touch events
+holdBtn.addEventListener('touchstart', e => { e.preventDefault(); startHold(); }, { passive: false });
+holdBtn.addEventListener('touchend',   e => { e.preventDefault(); endHold(); }, { passive: false });
+holdBtn.addEventListener('touchcancel',e => { e.preventDefault(); endHold(); }, { passive: false });
+
+// Mouse events (desktop)
+holdBtn.addEventListener('mousedown', e => { startHold(); });
+document.addEventListener('mouseup',  e => { endHold(); });
+
+// Prevent context menu on long press
+holdBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+function rank(s) {
+  if (s >= 60) return '👑 鉄人';
+  if (s >= 30) return '🔥 すごい';
+  if (s >= 10) return '👍 普通';
+  if (s >= 5)  return '😅 もう少し';
+  return '💀 即死';
+}
+
+function showResult(sec) {
+  document.getElementById('state-idle').style.display = 'none';
+  document.getElementById('state-result').style.display = 'flex';
+
+  const timeStr = sec.toFixed(1);
+  const r = rank(sec);
+
+  const timeEl = document.getElementById('result-time');
+  timeEl.textContent = timeStr;
+  document.getElementById('result-rank').textContent = r;
+
+  const best = parseFloat(localStorage.getItem('hold-best') || '0');
+  if (sec > best) {
+    localStorage.setItem('hold-best', sec.toFixed(1));
+    document.getElementById('result-best').textContent = '🎉 新記録！';
+  } else {
+    document.getElementById('result-best').textContent = `自己ベスト: ${parseFloat(localStorage.getItem('hold-best')).toFixed(1)}秒`;
+  }
+
+  timeEl.classList.remove('pop-in');
+  void timeEl.offsetWidth;
+  timeEl.classList.add('pop-in');
+}
+
+function showToast(m) {
+  const t = document.createElement('div');
+  t.textContent = m;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+    background:'#fff', color:'#000', padding:'10px 20px', borderRadius:'99px',
+    fontSize:'0.9rem', fontWeight:'700', zIndex:'999', pointerEvents:'none', whiteSpace:'nowrap'
+  });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function doShare() {
+  const time = document.getElementById('result-time').textContent;
+  const r    = document.getElementById('result-rank').textContent;
+  const text = `長押し耐久 ${time}秒 ${r}\nあなたは？ → kakera-apps.github.io/apps/hold.html\n#長押し耐久 #kakera_app #暇つぶし`;
+  if (navigator.share) { navigator.share({ text }); }
+  else { navigator.clipboard.writeText(text).then(() => showToast('コピーしました！')); }
+}
+
+showIdle();
+</script>
+</body>
+</html>
