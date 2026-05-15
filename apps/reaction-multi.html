@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>反射神経テスト 対戦</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KEGXWEWWCG"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KEGXWEWWCG');
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: -apple-system, sans-serif;
+    background: #0f0f0f; color: #fff;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+
+  /* ── セットアップ画面 ── */
+  #setup {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px; background: #0f0f0f; z-index: 100;
+  }
+  #setup h1 { font-size: 1.6rem; font-weight: 900; }
+  #setup p  { font-size: 0.9rem; opacity: 0.45; }
+  .player-btns { display: flex; gap: 16px; }
+  .player-btn {
+    width: 88px; height: 88px; border-radius: 20px;
+    border: 2px solid #333; background: #1a1a1a;
+    color: #fff; font-size: 1.5rem; font-weight: 900;
+    cursor: pointer; transition: transform 0.1s, background 0.1s;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px;
+  }
+  .player-btn span { font-size: 0.7rem; opacity: 0.5; font-weight: 400; }
+  .player-btn:active { transform: scale(0.92); background: #2a2a2a; }
+  .back-link { color: #555; font-size: 0.85rem; text-decoration: none; margin-top: 8px; }
+
+  /* ── ゲームエリア ── */
+  #game { width: 100vw; height: 100vh; display: none; position: relative; }
+  #grid { width: 100%; height: 100%; display: grid; }
+
+  /* ── プレイヤーゾーン ── */
+  .zone {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    border: 3px solid #1e1e1e;
+    transition: background 0.2s, border-color 0.15s;
+    position: relative; overflow: hidden;
+    touch-action: none;
+  }
+  .zone-label {
+    font-size: 0.9rem; font-weight: 700;
+    letter-spacing: 0.12em; opacity: 0.55;
+  }
+  .zone-status { font-size: 0.85rem; opacity: 0.4; }
+  .zone-time {
+    font-size: min(16vw, 5.5rem); font-weight: 900; line-height: 1;
+    display: none;
+  }
+  .zone-rank { font-size: 1.8rem; display: none; margin-top: 4px; }
+
+  .zone.ready   { border-color: var(--c); background: rgba(255,255,255,0.04); }
+  .zone.early   { border-color: #cc0000; background: rgba(200,0,0,0.12); }
+  .zone.tapped  { border-color: var(--c); }
+  .zone.timeout { opacity: 0.4; }
+
+  /* ── 中央オーバーレイ ── */
+  #overlay {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(140px, 32vw); height: min(140px, 32vw);
+    border-radius: 50%;
+    background: #111; border: 3px solid #2a2a2a;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; gap: 4px;
+    z-index: 20; pointer-events: none;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  #overlay.go    { background: #00c851; border-color: #00c851; }
+  #overlay.early { background: #cc0000; border-color: #cc0000; }
+  #ov-main { font-size: 1.1rem; font-weight: 900; line-height: 1.2; }
+  #ov-sub  { font-size: 0.65rem; opacity: 0.7; }
+
+  /* ── もう一度ボタン（結果後） ── */
+  #retry-overlay {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: none; justify-content: center;
+    padding: 16px; background: rgba(0,0,0,0.85);
+    gap: 12px; z-index: 30;
+  }
+  #retry-overlay button {
+    background: #fff; color: #000; border: none;
+    border-radius: 99px; padding: 14px 40px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+  }
+  #retry-overlay .btn-change {
+    background: #1a1a1a; color: #aaa;
+    border: 1px solid #333;
+  }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.4); opacity: 0; }
+    70%  { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .pop-in { animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+</style>
+</head>
+<body>
+
+<!-- セットアップ画面 -->
+<div id="setup">
+  <h1>反射神経テスト 対戦</h1>
+  <p>一つの画面を囲んでプレイ</p>
+  <div class="player-btns">
+    <button class="player-btn" onclick="init(2)">2P<span>左右</span></button>
+    <button class="player-btn" onclick="init(3)">3P<span>3分割</span></button>
+    <button class="player-btn" onclick="init(4)">4P<span>4分割</span></button>
+  </div>
+  <a class="back-link" href="../index.html">← 戻る</a>
+</div>
+
+<!-- ゲームエリア -->
+<div id="game">
+  <div id="grid"></div>
+  <div id="overlay">
+    <div id="ov-main">準備して</div>
+    <div id="ov-sub"></div>
+  </div>
+  <div id="retry-overlay">
+    <button class="btn-change" onclick="showSetup()">人数変更</button>
+    <button onclick="init(currentN)">もう一度</button>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#4fc3f7', '#ff8a65', '#00dc64', '#ce93d8'];
+const PNAMES = ['P1', 'P2', 'P3', 'P4'];
+const MEDALS = ['🥇', '🥈', '🥉', '4位'];
+
+const PHASE = { READY: 0, WAITING: 1, GO: 2, RESULT: 3 };
+let phase, players, goTime, waitTimer, currentN;
+
+const overlay    = document.getElementById('overlay');
+const ovMain     = document.getElementById('ov-main');
+const ovSub      = document.getElementById('ov-sub');
+const retryOv    = document.getElementById('retry-overlay');
+const grid       = document.getElementById('grid');
+
+function showSetup() {
+  clearTimeout(waitTimer);
+  document.getElementById('setup').style.display = 'flex';
+  document.getElementById('game').style.display = 'none';
+  retryOv.style.display = 'none';
+}
+
+function init(n) {
+  currentN = n;
+  clearTimeout(waitTimer);
+  retryOv.style.display = 'none';
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+
+  // グリッドレイアウト
+  if (n === 2) {
+    grid.style.gridTemplateColumns = '1fr 1fr';
+    grid.style.gridTemplateRows   = '1fr';
+  } else if (n === 3) {
+    grid.style.gridTemplateColumns = '1fr 1fr';
+    grid.style.gridTemplateRows   = '1fr 1fr';
+  } else {
+    grid.style.gridTemplateColumns = '1fr 1fr';
+    grid.style.gridTemplateRows   = '1fr 1fr';
+  }
+
+  grid.innerHTML = '';
+  players = Array.from({length: n}, (_, i) => ({
+    i, name: PNAMES[i], color: COLORS[i],
+    ready: false, time: null, early: false, el: null,
+  }));
+
+  players.forEach(p => {
+    const z = document.createElement('div');
+    z.className = 'zone';
+    z.style.setProperty('--c', p.color);
+    // 3P: 3枚目は横幅全体
+    if (n === 3 && p.i === 2) z.style.gridColumn = '1 / -1';
+
+    z.innerHTML = `
+      <div class="zone-label" style="color:${p.color}">${p.name}</div>
+      <div class="zone-status" id="st${p.i}">タップして準備</div>
+      <div class="zone-time"   id="tm${p.i}"></div>
+      <div class="zone-rank"   id="rk${p.i}"></div>
+    `;
+    z.addEventListener('touchstart', e => { e.preventDefault(); tap(p.i); }, {passive: false});
+    z.addEventListener('click', () => tap(p.i));
+    p.el = z;
+    grid.appendChild(z);
+  });
+
+  phase = PHASE.READY;
+  setOverlay('準備して', '全員タップで開始');
+  overlay.className = '';
+}
+
+function tap(i) {
+  const p = players[i];
+
+  if (phase === PHASE.READY) {
+    if (p.ready) return;
+    p.ready = true;
+    p.el.classList.add('ready');
+    document.getElementById(`st${i}`).textContent = '準備OK ✓';
+    const readyN = players.filter(x => x.ready).length;
+    setOverlay(`${readyN}/${currentN}`, '準備完了');
+    if (readyN === currentN) startWaiting();
+    return;
+  }
+
+  if (phase === PHASE.WAITING) {
+    if (p.early) return;
+    p.early = true;
+    p.el.classList.remove('ready');
+    p.el.classList.add('early');
+    document.getElementById(`st${i}`).textContent = '早すぎ！💀';
+    // 全員フライングなら即結果
+    if (players.every(x => x.early)) { clearTimeout(waitTimer); showResults(); }
+    return;
+  }
+
+  if (phase === PHASE.GO) {
+    if (p.time !== null || p.early) return;
+    p.time = Math.round(performance.now() - goTime);
+    p.el.classList.add('tapped');
+    showTime(i, p.time);
+    if (players.every(x => x.time !== null || x.early)) showResults();
+    return;
+  }
+}
+
+function startWaiting() {
+  phase = PHASE.WAITING;
+  setOverlay('待て...', '緑になったらタップ！');
+  overlay.className = '';
+  const delay = 1500 + Math.random() * 3500;
+  waitTimer = setTimeout(go, delay);
+}
+
+function go() {
+  phase = PHASE.GO;
+  goTime = performance.now();
+  setOverlay('今だ！', '');
+  overlay.className = 'go';
+  // 3秒以内に全員タップしなければ結果表示
+  waitTimer = setTimeout(() => { if (phase === PHASE.GO) showResults(); }, 3000);
+}
+
+function showTime(i, ms) {
+  const tmEl = document.getElementById(`tm${i}`);
+  const stEl = document.getElementById(`st${i}`);
+  stEl.style.display = 'none';
+  tmEl.style.display = 'block';
+  tmEl.textContent = ms + 'ms';
+  tmEl.style.color = ms < 150 ? '#FFD700' : ms < 200 ? '#00dc64' : ms < 300 ? '#4fc3f7' : '#fff';
+  tmEl.classList.remove('pop-in');
+  void tmEl.offsetWidth;
+  tmEl.classList.add('pop-in');
+}
+
+function showResults() {
+  phase = PHASE.RESULT;
+  setOverlay('結果', '');
+  overlay.className = '';
+
+  const tapped = players.filter(p => p.time !== null).sort((a, b) => a.time - b.time);
+  tapped.forEach((p, rank) => {
+    const rkEl = document.getElementById(`rk${p.i}`);
+    rkEl.textContent = MEDALS[rank];
+    rkEl.style.display = 'block';
+    rkEl.classList.remove('pop-in');
+    void rkEl.offsetWidth;
+    rkEl.classList.add('pop-in');
+  });
+
+  players.filter(p => p.early).forEach(p => {
+    const rkEl = document.getElementById(`rk${p.i}`);
+    rkEl.textContent = '💀 フライング';
+    rkEl.style.fontSize = '1.1rem';
+    rkEl.style.display = 'block';
+  });
+
+  players.filter(p => p.time === null && !p.early).forEach(p => {
+    p.el.classList.add('timeout');
+    document.getElementById(`st${p.i}`).textContent = 'タイムアウト';
+    document.getElementById(`st${p.i}`).style.display = 'block';
+  });
+
+  retryOv.style.display = 'flex';
+}
+
+function setOverlay(main, sub) {
+  ovMain.textContent = main;
+  ovSub.textContent  = sub;
+}
+</script>
+</body>
+</html>
