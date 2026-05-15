@@ -309,7 +309,7 @@
   function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
 
   document.getElementById('share-btn').addEventListener('click', () => {
-    shareResult(`もぐら叩き ${score}匹 ${getRank(score)}\nあなたは何匹叩ける？ → kakera-apps.github.io/apps/whack.html\n#もぐら叩き #ミニゲーム集`);
+    shareResult(`もぐら叩き ${score}匹 ${getRank(score)}\nあなたは何匹叩ける？ → kakera-apps.github.io/apps/whack.html\n#もぐら叩き #kakera_app #暇つぶし`);
   });
 
   document.getElementById('start-btn').addEventListener('click', startGame);
