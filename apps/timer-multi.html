@@ -209,7 +209,11 @@ function tap(i) {
     p.elapsed = (performance.now() - goTime) / 1000;
     p.el.classList.remove('running');
     p.el.classList.add('stopped');
-    showPlayerTime(p.i, p.elapsed);
+    document.getElementById(`st${p.i}`).textContent = '停止 ✓';
+    const stoppedN = players.filter(x => x.elapsed !== null).length;
+    setOverlay(`${stoppedN}/${currentN}`, '停止済み');
+    overlay.style.display = '';
+    overlay.className = '';
     if (players.every(x => x.elapsed !== null)) {
       clearTimeout(timeoutTimer);
       showResults();
@@ -261,7 +265,6 @@ function handleTimeout() {
       p.elapsed = (performance.now() - goTime) / 1000;
       p.el.classList.remove('running');
       p.el.classList.add('timeout');
-      showPlayerTime(p.i, p.elapsed);
     }
   });
   showResults();
@@ -294,6 +297,8 @@ function showPlayerTime(i, elapsed) {
 function showResults() {
   phase = PHASE.RESULT;
   overlay.style.display = 'none';
+
+  players.forEach(p => showPlayerTime(p.i, p.elapsed));
 
   const sorted = [...players].sort((a, b) =>
     Math.abs(a.elapsed - TARGET) - Math.abs(b.elapsed - TARGET)
