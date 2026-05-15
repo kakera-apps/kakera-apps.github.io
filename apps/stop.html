@@ -242,6 +242,7 @@
     else if (accuracy >= 40) accColor = '#ffffff';
     else                     accColor = '#ff4d4d';
 
+    window._shareText = `ちょうど止めろ 精度${accuracy.toFixed(1)}% ${comment}\nあなたは？ → kakera-apps.github.io/apps/stop.html\n#ちょうど止めろ #kakera_app #暇つぶし`;
     result.innerHTML = `
       <div class="accuracy pop-in" style="color:${accColor}">${accuracy.toFixed(1)}%</div>
       <div class="comment">${comment}</div>

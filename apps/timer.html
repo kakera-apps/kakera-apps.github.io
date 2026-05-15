@@ -257,6 +257,7 @@
   document.body.addEventListener('click', (e) => {
     if (e.target.closest('.back')) return;
     if (e.target === shareBtn) return;
+    if (e.target === xBtn) return;
     if (state === STATES.IDLE)    { toRunning(); return; }
     if (state === STATES.RUNNING) { toDone();   return; }
     if (state === STATES.DONE)    { toIdle();   return; }

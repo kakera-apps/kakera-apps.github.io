@@ -66,7 +66,7 @@
 <div id="time"></div>
 <div class="history" id="history"></div>
 <button class="share-btn" id="share-btn" style="display:none">シェアする 🔗</button>
-<button class="x-btn" id="x-btn" style="display:none" onclick="xShare()">X でシェア</button>
+<button class="x-btn" id="x-btn" style="display:none">X でシェア</button>
 <div class="ad"><!-- AdSense --></div>
 
 <script>
@@ -179,7 +179,7 @@ body.addEventListener('click', () => {
 renderHistory();
 
 const shareBtn = document.getElementById('share-btn');
-  const xBtn = document.getElementById('x-btn');
+const xBtn = document.getElementById('x-btn');
 function showToast(m){const t=Object.assign(document.createElement('div'),{textContent:m});Object.assign(t.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',background:'#fff',color:'#000',padding:'10px 20px',borderRadius:'99px',fontSize:'0.9rem',fontWeight:'700',zIndex:'999',pointerEvents:'none'});document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
 function shareResult(text){if(navigator.share){navigator.share({text});}else{navigator.clipboard.writeText(text).then(()=>showToast('コピーしました！'));}}
 shareBtn.addEventListener('click', e => {
@@ -187,7 +187,12 @@ shareBtn.addEventListener('click', e => {
   const ms = parseInt(timeEl.textContent);
   shareResult(`反射神経テスト ${ms}ms ${rank(ms)}\nあなたは？ → kakera-apps.github.io/apps/reaction.html\n#反射神経テスト #kakera_app #暇つぶし`);
 });
-function xShare(){const ms=parseInt(document.getElementById('time-display').textContent);window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(`反射神経テスト ${ms}ms ${rank(ms)}\nあなたは？ → kakera-apps.github.io/apps/reaction.html\n#反射神経テスト #kakera_app #暇つぶし`),'_blank');}
+xBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const ms = parseInt(timeEl.textContent);
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(`反射神経テスト ${ms}ms ${rank(ms)}\nあなたは？ → kakera-apps.github.io/apps/reaction.html\n#反射神経テスト #kakera_app #暇つぶし`), '_blank');
+});
+function xShare(){}
 </script>
 </body>
 </html>
