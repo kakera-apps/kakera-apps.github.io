@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>もぐら叩き</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+    text-align: center;
+  }
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+  }
+  .back:hover { color: #aaa; }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .sub {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+  .hud {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .hud-item { text-align: center; }
+  .hud-val {
+    font-size: 2rem;
+    font-weight: 900;
+  }
+  .hud-label {
+    font-size: 0.7rem;
+    opacity: 0.4;
+    letter-spacing: 0.1em;
+  }
+  #timer-val { color: #ffd700; }
+  #score-val { color: #00dc64; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: min(90vw, 360px);
+    margin-bottom: 28px;
+  }
+  .cell {
+    aspect-ratio: 1;
+    background: #1a1a1a;
+    border-radius: 50%;
+    border: 3px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.4rem;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell.active {
+    background: #1e2e1e;
+    border-color: #00dc64;
+    animation: popUp 0.15s ease;
+  }
+  .cell.hit {
+    background: #2e1e1e;
+    border-color: #ff4d4d;
+  }
+  @keyframes popUp {
+    0%   { transform: scale(0.7); }
+    60%  { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+  .cell .mole { display: none; }
+  .cell.active .mole { display: block; }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h2 { font-size: 2rem; font-weight: 900; }
+  .overlay .final-score { font-size: 4rem; font-weight: 900; color: #00dc64; }
+  .overlay .rank-label  { font-size: 1.5rem; }
+  .overlay .best-label  { font-size: 0.85rem; opacity: 0.45; }
+  .overlay button {
+    margin-top: 16px;
+    padding: 16px 48px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .start-overlay { }
+  .result-overlay { }
+  .ad { margin-top: 40px; min-height: 50px; width: 320px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="../index.html">← 戻る</a>
+
+<h1>もぐら叩き</h1>
+<div class="sub">WHACK-A-MOLE</div>
+
+<div class="hud">
+  <div class="hud-item">
+    <div class="hud-val" id="score-val">0</div>
+    <div class="hud-label">SCORE</div>
+  </div>
+  <div class="hud-item">
+    <div class="hud-val" id="timer-val">30</div>
+    <div class="hud-label">SEC</div>
+  </div>
+</div>
+
+<div class="grid" id="grid">
+  <div class="cell" data-i="0"><span class="mole">●</span></div>
+  <div class="cell" data-i="1"><span class="mole">●</span></div>
+  <div class="cell" data-i="2"><span class="mole">●</span></div>
+  <div class="cell" data-i="3"><span class="mole">●</span></div>
+  <div class="cell" data-i="4"><span class="mole">●</span></div>
+  <div class="cell" data-i="5"><span class="mole">●</span></div>
+  <div class="cell" data-i="6"><span class="mole">●</span></div>
+  <div class="cell" data-i="7"><span class="mole">●</span></div>
+  <div class="cell" data-i="8"><span class="mole">●</span></div>
+</div>
+
+<!-- スタート画面 -->
+<div class="overlay start-overlay" id="start-overlay">
+  <h2>もぐら叩き</h2>
+  <div style="opacity:0.5;font-size:0.95rem;line-height:1.6">30秒間<br>出てきたもぐらを叩こう！</div>
+  <button id="start-btn">スタート</button>
+</div>
+
+<!-- 結果画面 -->
+<div class="overlay result-overlay hidden" id="result-overlay">
+  <h2>終了！</h2>
+  <div class="final-score" id="final-score">0</div>
+  <div class="rank-label" id="rank-label"></div>
+  <div class="best-label" id="best-label"></div>
+  <button id="retry-btn">もう一度</button>
+</div>
+
+<div class="ad">
+  <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="XXXXXXXX" data-ad-format="auto"></ins> -->
+</div>
+
+<script>
+  const cells    = Array.from(document.querySelectorAll('.cell'));
+  const scoreEl  = document.getElementById('score-val');
+  const timerEl  = document.getElementById('timer-val');
+  const startOv  = document.getElementById('start-overlay');
+  const resultOv = document.getElementById('result-overlay');
+  const finalScoreEl = document.getElementById('final-score');
+  const rankLabelEl  = document.getElementById('rank-label');
+  const bestLabelEl  = document.getElementById('best-label');
+
+  let score = 0;
+  let timeLeft = 30;
+  let running = false;
+  let moleTimer = null;
+  let countdown = null;
+  let activeCells = new Set();
+  let moleHideTimers = {};
+
+  let best = parseInt(localStorage.getItem('whack-best') || '0');
+
+  function getRank(s) {
+    if (s >= 20) return '🏆 神業！';
+    if (s >= 14) return '⭐ すごい！';
+    if (s >= 8)  return '👍 なかなか';
+    if (s >= 4)  return '😅 もう少し';
+    return '💀 次こそは';
+  }
+
+  function clearAllMoles() {
+    cells.forEach(c => {
+      c.classList.remove('active', 'hit');
+    });
+    Object.values(moleHideTimers).forEach(clearTimeout);
+    moleHideTimers = {};
+    activeCells.clear();
+  }
+
+  function showRandomMole() {
+    if (!running) return;
+    // 空いているセルにもぐら出現
+    const available = cells.filter(c => !activeCells.has(c));
+    if (available.length === 0) return;
+
+    const cell = available[Math.floor(Math.random() * available.length)];
+    activeCells.add(cell);
+    cell.classList.add('active');
+
+    // 0.8秒後に消える
+    const idx = cell.dataset.i;
+    moleHideTimers[idx] = setTimeout(() => {
+      cell.classList.remove('active', 'hit');
+      activeCells.delete(cell);
+      delete moleHideTimers[idx];
+    }, 800);
+
+    // 次のもぐら: 0.8〜1.5秒後
+    const next = 800 + Math.random() * 700;
+    moleTimer = setTimeout(showRandomMole, next);
+  }
+
+  function startGame() {
+    score = 0;
+    timeLeft = 30;
+    running = true;
+    scoreEl.textContent = '0';
+    timerEl.textContent = '30';
+    startOv.classList.add('hidden');
+    resultOv.classList.add('hidden');
+
+    showRandomMole();
+
+    countdown = setInterval(() => {
+      timeLeft--;
+      timerEl.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        endGame();
+      }
+    }, 1000);
+  }
+
+  function endGame() {
+    running = false;
+    clearTimeout(moleTimer);
+    clearInterval(countdown);
+    clearAllMoles();
+
+    if (score > best) {
+      best = score;
+      localStorage.setItem('whack-best', best);
+    }
+
+    finalScoreEl.textContent = score;
+    rankLabelEl.textContent  = getRank(score);
+    bestLabelEl.textContent  = `ベスト: ${best}`;
+    resultOv.classList.remove('hidden');
+  }
+
+  cells.forEach(cell => {
+    cell.addEventListener('click', () => {
+      if (!running) return;
+      if (!cell.classList.contains('active')) return;
+
+      const idx = cell.dataset.i;
+      clearTimeout(moleHideTimers[idx]);
+      delete moleHideTimers[idx];
+      activeCells.delete(cell);
+
+      cell.classList.remove('active');
+      cell.classList.add('hit');
+      setTimeout(() => cell.classList.remove('hit'), 200);
+
+      score++;
+      scoreEl.textContent = score;
+    });
+  });
+
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('retry-btn').addEventListener('click', startGame);
+</script>
+</body>
+</html>

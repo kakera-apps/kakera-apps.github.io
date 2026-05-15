@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ジャスト10秒</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .back:hover { color: #aaa; }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .sub {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    letter-spacing: 0.1em;
+    margin-bottom: 60px;
+  }
+  .circle {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    border: 4px solid #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 48px;
+    transition: border-color 0.3s, background 0.3s;
+    position: relative;
+  }
+  .circle.idle    { border-color: #444; }
+  .circle.running { border-color: #00dc64; background: rgba(0,220,100,0.05); }
+  .circle.done    { border-color: #4fc3f7; background: rgba(79,195,247,0.05); }
+  .big-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+    opacity: 0.9;
+  }
+  .small-text {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+  }
+  .elapsed {
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    min-height: 56px;
+  }
+  .rank-text {
+    font-size: 2rem;
+    font-weight: 900;
+    min-height: 48px;
+  }
+  .diff-text {
+    font-size: 1rem;
+    opacity: 0.6;
+    margin-top: 8px;
+    min-height: 28px;
+  }
+  .history {
+    font-size: 0.82rem;
+    opacity: 0.35;
+    margin-top: 24px;
+    letter-spacing: 0.05em;
+  }
+  .ad { margin-top: 48px; min-height: 50px; width: 320px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="../index.html" onclick="event.stopPropagation()">← 戻る</a>
+
+<h1>ジャスト10秒</h1>
+<div class="sub">STOP AT EXACTLY 10 SECONDS</div>
+
+<div class="circle idle" id="circle">
+  <div class="big-text" id="circle-msg">タップして<br>スタート</div>
+  <div class="small-text" id="circle-sub"></div>
+</div>
+
+<div class="elapsed" id="elapsed"></div>
+<div class="rank-text" id="rank"></div>
+<div class="diff-text" id="diff"></div>
+<div class="history" id="history"></div>
+
+<div class="ad">
+  <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="XXXXXXXX" data-ad-format="auto"></ins> -->
+</div>
+
+<script>
+  const STATES = { IDLE: 'idle', RUNNING: 'running', DONE: 'done' };
+  let state = STATES.IDLE;
+  let startTime = null;
+
+  const circle   = document.getElementById('circle');
+  const circleMsg = document.getElementById('circle-msg');
+  const circleSub = document.getElementById('circle-sub');
+  const elapsedEl = document.getElementById('elapsed');
+  const rankEl    = document.getElementById('rank');
+  const diffEl    = document.getElementById('diff');
+  const histEl    = document.getElementById('history');
+
+  let records = JSON.parse(localStorage.getItem('timer10-records') || '[]');
+  renderHistory();
+
+  function renderHistory() {
+    if (!records.length) { histEl.textContent = ''; return; }
+    const best = records.reduce((b, r) => Math.abs(r - 10) < Math.abs(b - 10) ? r : b, records[0]);
+    const avg  = (records.reduce((s, r) => s + r, 0) / records.length).toFixed(2);
+    histEl.textContent = `直近${records.length}回 | 平均 ${avg}s | ベスト差 ${Math.abs(best - 10).toFixed(3)}s`;
+  }
+
+  function getRank(diff) {
+    if (diff <= 0.1) return '🏆 神業！';
+    if (diff <= 0.5) return '⭐ すごい！';
+    if (diff <= 1.0) return '👍 惜しい';
+    return '😅 もう少し';
+  }
+
+  function toIdle() {
+    state = STATES.IDLE;
+    circle.className = 'circle idle';
+    circleMsg.innerHTML = 'タップして<br>スタート';
+    circleSub.textContent = '';
+    elapsedEl.textContent = '';
+    rankEl.textContent = '';
+    diffEl.textContent = '';
+  }
+
+  function toRunning() {
+    state = STATES.RUNNING;
+    startTime = performance.now();
+    circle.className = 'circle running';
+    circleMsg.textContent = '計測中...';
+    circleSub.textContent = '10秒だ！と思ったらタップ';
+    elapsedEl.textContent = '';
+    rankEl.textContent = '';
+    diffEl.textContent = '';
+  }
+
+  function toDone() {
+    const elapsed = (performance.now() - startTime) / 1000;
+    state = STATES.DONE;
+    circle.className = 'circle done';
+    circleMsg.textContent = 'タップで<br>リトライ';
+    circleSub.textContent = '';
+
+    const diff = Math.abs(elapsed - 10);
+    const sign = elapsed >= 10 ? '+' : '-';
+
+    elapsedEl.textContent = elapsed.toFixed(3) + '秒';
+    rankEl.textContent = getRank(diff);
+    diffEl.textContent = `目標との差: ${sign}${diff.toFixed(3)}秒`;
+
+    records.unshift(elapsed);
+    if (records.length > 10) records = records.slice(0, 10);
+    localStorage.setItem('timer10-records', JSON.stringify(records));
+    renderHistory();
+  }
+
+  document.body.addEventListener('click', (e) => {
+    if (e.target.closest('.back')) return;
+    if (state === STATES.IDLE)    { toRunning(); return; }
+    if (state === STATES.RUNNING) { toDone();   return; }
+    if (state === STATES.DONE)    { toIdle();   return; }
+  });
+</script>
+</body>
+</html>

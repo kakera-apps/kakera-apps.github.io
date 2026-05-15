@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日の運勢</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 20px;
+    text-align: center;
+  }
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+  }
+  .back:hover { color: #aaa; }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .sub {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    letter-spacing: 0.1em;
+    margin-bottom: 48px;
+  }
+  .omikuji-box {
+    width: 200px;
+    height: 260px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 36px;
+    transition: transform 0.15s;
+  }
+  .omikuji-box.revealed { border-color: var(--luck-color, #666); }
+  .luck-emoji { font-size: 3.5rem; }
+  .luck-name {
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: var(--luck-color, #fff);
+  }
+  .luck-comment {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    line-height: 1.5;
+    max-width: 240px;
+    padding: 0 8px;
+  }
+  .oracle-btn {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: #1e1e1e;
+    border: 2px solid #444;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .oracle-btn:active { transform: scale(0.92); background: #2a2a2a; }
+  .date-note {
+    font-size: 0.75rem;
+    opacity: 0.3;
+    margin-top: 20px;
+    letter-spacing: 0.05em;
+  }
+  .ad { margin-top: 48px; min-height: 50px; width: 320px; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .fade-in { animation: fadeIn 0.4s ease; }
+</style>
+</head>
+<body>
+
+<a class="back" href="../index.html">← 戻る</a>
+
+<h1>今日の運勢</h1>
+<div class="sub">TODAY'S FORTUNE</div>
+
+<div class="omikuji-box" id="box">
+  <div class="luck-emoji" id="luck-emoji">🎋</div>
+  <div class="luck-name" id="luck-name">おみくじ</div>
+  <div class="luck-comment" id="luck-comment">下のボタンをタップして今日の運勢を占おう</div>
+</div>
+
+<button class="oracle-btn" id="oracle-btn">占う</button>
+
+<div class="date-note" id="date-note"></div>
+
+<div class="ad">
+  <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="XXXXXXXX" data-ad-format="auto"></ins> -->
+</div>
+
+<script>
+  const FORTUNES = [
+    {
+      name: '大吉', emoji: '🌟', color: '#FFD700', weight: 5,
+      comment: '最高の運気！何事もうまくいく最高の日。積極的に動こう。'
+    },
+    {
+      name: '吉', emoji: '😊', color: '#00dc64', weight: 15,
+      comment: '運気良好。今日は思い切って挑戦してみよう。'
+    },
+    {
+      name: '中吉', emoji: '🍀', color: '#4fc3f7', weight: 20,
+      comment: 'まずまずの運気。コツコツ積み上げると良い結果に。'
+    },
+    {
+      name: '小吉', emoji: '🌱', color: '#81c784', weight: 25,
+      comment: '小さな幸せが積み重なる日。些細なことに感謝しよう。'
+    },
+    {
+      name: '末吉', emoji: '🌥', color: '#aaa', weight: 20,
+      comment: '焦らず慎重に。後半に向けて運気が上がっていく。'
+    },
+    {
+      name: '凶', emoji: '😰', color: '#ff8a65', weight: 10,
+      comment: '慎重に行動しよう。無理をせず休息を大切に。'
+    },
+    {
+      name: '大凶', emoji: '💀', color: '#ff4d4d', weight: 5,
+      comment: '嵐の前の静けさ。じっと耐えれば必ず好転する。'
+    }
+  ];
+
+  const total = FORTUNES.reduce((s, f) => s + f.weight, 0);
+
+  function drawFortune() {
+    let r = Math.random() * total;
+    for (const f of FORTUNES) {
+      r -= f.weight;
+      if (r <= 0) return f;
+    }
+    return FORTUNES[FORTUNES.length - 1];
+  }
+
+  const box     = document.getElementById('box');
+  const emojiEl = document.getElementById('luck-emoji');
+  const nameEl  = document.getElementById('luck-name');
+  const commentEl = document.getElementById('luck-comment');
+  const btn     = document.getElementById('oracle-btn');
+  const dateNote = document.getElementById('date-note');
+
+  const today = new Date();
+  dateNote.textContent = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+
+  btn.addEventListener('click', () => {
+    const f = drawFortune();
+
+    box.classList.remove('revealed', 'fade-in');
+    emojiEl.textContent = '';
+    nameEl.textContent = '';
+    commentEl.textContent = '';
+
+    setTimeout(() => {
+      box.style.setProperty('--luck-color', f.color);
+      box.classList.add('revealed', 'fade-in');
+      emojiEl.textContent    = f.emoji;
+      nameEl.textContent     = f.name;
+      nameEl.style.color     = f.color;
+      commentEl.textContent  = f.comment;
+    }, 80);
+  });
+</script>
+</body>
+</html>

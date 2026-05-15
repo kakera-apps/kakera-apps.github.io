@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ちょうど止めろ</title>
+<!-- AdSense: <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, sans-serif;
+    background: #0f0f0f;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .back {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+  }
+  .back:hover { color: #aaa; }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+  .sub {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    margin-bottom: 40px;
+    letter-spacing: 0.1em;
+  }
+  .track {
+    position: relative;
+    width: 90vw;
+    max-width: 400px;
+    height: 60px;
+    background: #1e1e1e;
+    border-radius: 30px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid #333;
+  }
+  .zone {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20%;
+    height: 100%;
+    background: rgba(0, 220, 100, 0.25);
+    border-left: 2px solid #00dc64;
+    border-right: 2px solid #00dc64;
+  }
+  .center-line {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 100%;
+    background: #00dc64;
+    opacity: 0.5;
+  }
+  .bar {
+    position: absolute;
+    top: 8px;
+    width: 28px;
+    height: 44px;
+    background: #fff;
+    border-radius: 6px;
+    will-change: left;
+  }
+  .result-area {
+    margin-top: 40px;
+    text-align: center;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .accuracy {
+    font-size: 4rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .comment {
+    font-size: 1.6rem;
+    margin-top: 12px;
+  }
+  .best {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    margin-top: 32px;
+    letter-spacing: 0.1em;
+  }
+  .hint {
+    font-size: 0.85rem;
+    opacity: 0.4;
+    margin-top: 12px;
+  }
+  .ad { margin-top: 48px; min-height: 50px; width: 320px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="../index.html">← 戻る</a>
+
+<h1>ちょうど止めろ</h1>
+<div class="sub">TAP TO STOP</div>
+
+<div class="track" id="track">
+  <div class="zone"></div>
+  <div class="center-line"></div>
+  <div class="bar" id="bar"></div>
+</div>
+
+<div class="result-area" id="result">
+  <div class="hint">バーをタップして止めよう</div>
+</div>
+
+<div class="best" id="best"></div>
+
+<div class="ad">
+  <!-- <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="XXXXXXXX" data-ad-format="auto"></ins> -->
+</div>
+
+<script>
+  const track = document.getElementById('track');
+  const bar   = document.getElementById('bar');
+  const result = document.getElementById('result');
+  const bestEl = document.getElementById('best');
+
+  let running = false;
+  let pos = 0;        // 0〜1 (バー中心の割合)
+  let direction = 1;
+  let rafId = null;
+  let lastTime = null;
+  const SPEED = 0.6;  // 1秒でトラック全幅を移動する割合
+
+  let bestScore = parseFloat(localStorage.getItem('stop-best') || '0');
+  renderBest();
+
+  function renderBest() {
+    if (bestScore > 0) {
+      bestEl.textContent = `ベスト: ${bestScore.toFixed(1)}%`;
+    }
+  }
+
+  function getBarLeft(p) {
+    const trackW = track.clientWidth;
+    const barW = bar.clientWidth;
+    return p * (trackW - barW);
+  }
+
+  function startAnimation() {
+    running = true;
+    lastTime = null;
+    result.innerHTML = '<div class="hint">タップして止めよう！</div>';
+
+    function step(ts) {
+      if (!running) return;
+      if (lastTime === null) lastTime = ts;
+      const dt = (ts - lastTime) / 1000;
+      lastTime = ts;
+
+      pos += direction * SPEED * dt;
+      if (pos >= 1) { pos = 1; direction = -1; }
+      if (pos <= 0) { pos = 0; direction = 1; }
+
+      bar.style.left = getBarLeft(pos) + 'px';
+      rafId = requestAnimationFrame(step);
+    }
+    rafId = requestAnimationFrame(step);
+  }
+
+  function stopAndScore() {
+    running = false;
+    cancelAnimationFrame(rafId);
+
+    // 中央からの距離 (0=中央, 0.5=端)
+    const distFromCenter = Math.abs(pos - 0.5); // 0〜0.5
+    const zoneHalf = 0.10; // ゾーン幅の半分(20%の半分)
+
+    // 精度: 中央ぴったりなら100%、端なら0%
+    const accuracy = Math.max(0, 100 - distFromCenter * 200);
+
+    let comment;
+    if (accuracy >= 95) comment = '🎯 完璧！';
+    else if (accuracy >= 80) comment = '⭐ すごい！';
+    else if (accuracy >= 60) comment = '👍 まあまあ';
+    else if (accuracy >= 40) comment = '😅 惜しい';
+    else comment = '💀 ひどい';
+
+    result.innerHTML = `
+      <div class="accuracy">${accuracy.toFixed(1)}%</div>
+      <div class="comment">${comment}</div>
+    `;
+
+    if (accuracy > bestScore) {
+      bestScore = accuracy;
+      localStorage.setItem('stop-best', bestScore.toFixed(1));
+      renderBest();
+    }
+  }
+
+  track.addEventListener('click', () => {
+    if (running) {
+      stopAndScore();
+    } else {
+      startAnimation();
+    }
+  });
+
+  // 初期位置
+  bar.style.left = getBarLeft(pos) + 'px';
+  startAnimation();
+</script>
+</body>
+</html>
