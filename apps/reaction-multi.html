@@ -187,6 +187,7 @@ function init(n) {
   });
 
   phase = PHASE.READY;
+  overlay.style.display = '';
   setOverlay('準備して', '全員タップで開始');
   overlay.className = '';
 }
@@ -288,7 +289,7 @@ function showResults() {
     document.getElementById(`st${p.i}`).style.display = 'block';
   });
 
-  setOverlay('タップで\nもう一度', '');
+  overlay.style.display = 'none';
 }
 
 function setOverlay(main, sub) {
